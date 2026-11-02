@@ -1,0 +1,20 @@
+{
+  "date": "2026-10-31",
+  "result": "passed_with_warnings",
+  "passed": 16,
+  "warnings": 3,
+  "errors": 0,
+  "migration": "022_notification_leases.sql",
+  "components": [
+    "模拟 API",
+    "本机账号 API",
+    "网页",
+    "后台维护",
+    "通知投递"
+  ],
+  "warningsDetail": [
+    "当前沿用的本机 PostgreSQL 为回环无密码连接，不能用于公网部署",
+    "本机沿用旧通知密钥；公网部署前需要密钥轮换与待发送任务重加密",
+    "真实模型端点尚未配置"
+  ]
+}

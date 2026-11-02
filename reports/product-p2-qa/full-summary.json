@@ -1,0 +1,105 @@
+{
+  "date": "2026-10-30T06:42:51.493Z",
+  "results": [
+    {
+      "name": "postgres-init",
+      "passed": true,
+      "seconds": 2
+    },
+    {
+      "name": "postgres-start",
+      "passed": true,
+      "seconds": 2
+    },
+    {
+      "name": "maintenance",
+      "passed": true,
+      "seconds": 1
+    },
+    {
+      "name": "notification-json",
+      "passed": true,
+      "seconds": 1
+    },
+    {
+      "name": "postgres-api",
+      "passed": true,
+      "seconds": 9
+    },
+    {
+      "name": "postgres-lifecycle",
+      "passed": true,
+      "seconds": 13
+    },
+    {
+      "name": "account-tokens",
+      "passed": true,
+      "seconds": 1
+    },
+    {
+      "name": "companion-store",
+      "passed": true,
+      "seconds": 1
+    },
+    {
+      "name": "lifecycle-store",
+      "passed": true,
+      "seconds": 1
+    },
+    {
+      "name": "api",
+      "passed": true,
+      "seconds": 5
+    },
+    {
+      "name": "account",
+      "passed": true,
+      "seconds": 10
+    },
+    {
+      "name": "couple",
+      "passed": true,
+      "seconds": 28
+    },
+    {
+      "name": "e2e",
+      "passed": true,
+      "seconds": 23
+    },
+    {
+      "name": "import",
+      "passed": true,
+      "seconds": 17
+    },
+    {
+      "name": "privacy",
+      "passed": true,
+      "seconds": 14
+    },
+    {
+      "name": "lifecycle",
+      "passed": true,
+      "seconds": 10
+    },
+    {
+      "name": "visual",
+      "passed": true,
+      "seconds": 55
+    },
+    {
+      "name": "release",
+      "passed": true,
+      "seconds": 8
+    },
+    {
+      "name": "build",
+      "passed": true,
+      "seconds": 2
+    },
+    {
+      "name": "pwa",
+      "passed": true,
+      "seconds": 14
+    }
+  ]
+}

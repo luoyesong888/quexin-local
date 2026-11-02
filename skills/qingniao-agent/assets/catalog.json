@@ -1,0 +1,30 @@
+{
+  "format": "quexin-agent-skills-v1",
+  "skills": [
+    {"id":"command-inbox","name":"指令收件箱","description":"在零资料状态下理解用户直接输入的管理指令并选择必要 Skill。","risk":"L0","inputs":["user-command"],"outputs":["routing"]},
+    {"id":"personal-memory","name":"个人记忆","description":"把用户明确陈述的经历或偏好生成待确认记忆草稿。","risk":"L1","inputs":["user-command"],"outputs":["memory-draft"]},
+    {"id":"personal-planner","name":"个人计划与习惯","description":"把任务、提醒、长期目标或重复习惯生成计划草稿。","risk":"L1","inputs":["user-command"],"outputs":["plan-draft"]},
+    {"id":"personal-journal","name":"个人创作","description":"把明确指令生成信件、日常或年度回顾草稿。","risk":"L1","inputs":["user-command"],"outputs":["journal-draft","care-draft"]},
+    {"id":"discover-imports","name":"发现新导入","description":"检查已经进入鹊信的待确认内容并提出整理建议。","risk":"L1","inputs":["pending-records"],"outputs":["memory-draft"]},
+    {"id":"image-to-memory-plan","name":"图片变成行动","description":"把用户选择图片的 OCR 文本整理为回忆和可选计划。","risk":"L2","inputs":["ocr-text"],"outputs":["memory-draft","plan-draft"]},
+    {"id":"plan-follow-up","name":"计划持续跟进","description":"查看待办日期与状态，生成提醒或关怀跟进草稿。","risk":"L1","inputs":["plans"],"outputs":["plan-draft","email-draft"]},
+    {"id":"calendar-draft","name":"日历草稿","description":"把已确认的计划转换为可下载的 ICS 日历草稿。","risk":"L3","inputs":["plan-draft"],"outputs":["calendar-draft"]},
+    {"id":"email-draft","name":"邮件草稿","description":"根据用户目标生成主题和正文，只打开本机邮件客户端。","risk":"L3","inputs":["confirmed-sources"],"outputs":["email-draft"]},
+    {"id":"relationship-review","name":"多轮关系回顾","description":"基于所选已确认资料做来源化回顾并提出下一问。","risk":"L0","inputs":["confirmed-sources","conversation"],"outputs":["review","follow-up"]}
+  ],
+  "capabilityGates": [
+    {"id":"wechat-chat-import","name":"微信聊天提取","enabled":false,"requiredCapability":"verified-workbuddy-chat-extractor","reason":"尚未检测到经过来源、权限和失败回退验收的 WorkBuddy 聊天提取适配器。"}
+  ],
+  "productTools": [
+    {"id":"open-page","name":"打开产品页面","risk":"L0","description":"打开今日、导入、回忆、计划、关怀、鹊巢、创作或设置页面；高风险操作仍在页面内确认。"},
+    {"id":"pet-touch","name":"摸摸小鹊","risk":"L1","description":"执行一次可逆的宠物互动。"},
+    {"id":"pet-feed","name":"给小鹊喂食","risk":"L1","description":"执行一次喂食互动。"},
+    {"id":"pet-rest","name":"让小鹊休息","risk":"L1","description":"把宠物姿态切换为休息。"},
+    {"id":"pet-wake","name":"唤醒小鹊","risk":"L1","description":"把宠物姿态切换为待机。"},
+    {"id":"change-theme","name":"切换主题","risk":"L1","description":"切换个人界面主题，不影响伴侣设置。"},
+    {"id":"toggle-care","name":"开关关怀模块","risk":"L1","description":"启用或关闭个人关怀入口。"},
+    {"id":"toggle-pet","name":"开关鹊巢模块","risk":"L1","description":"启用或关闭个人鹊巢入口。"},
+    {"id":"export-backup","name":"导出浏览器备份","risk":"L1","description":"下载包含本地私人资料的 JSON 备份。"},
+    {"id":"export-museum","name":"导出离线纪念馆","risk":"L1","description":"从已确认回忆生成离线 HTML。"}
+  ]
+}

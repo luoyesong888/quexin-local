@@ -1,0 +1,175 @@
+{
+  "date": "2026-10-31T07:57:37.418Z",
+  "results": [
+    {
+      "name": "postgres-init",
+      "passed": true,
+      "seconds": 2
+    },
+    {
+      "name": "postgres-start",
+      "passed": true,
+      "seconds": 2
+    },
+    {
+      "name": "maintenance",
+      "passed": true,
+      "seconds": 1
+    },
+    {
+      "name": "notification-json",
+      "passed": true,
+      "seconds": 3
+    },
+    {
+      "name": "operations-permissions",
+      "passed": true,
+      "seconds": 0
+    },
+    {
+      "name": "local-runtime",
+      "passed": true,
+      "seconds": 20
+    },
+    {
+      "name": "postgres-api",
+      "passed": true,
+      "seconds": 6
+    },
+    {
+      "name": "postgres-lifecycle",
+      "passed": true,
+      "seconds": 11
+    },
+    {
+      "name": "postgres-care",
+      "passed": true,
+      "seconds": 9
+    },
+    {
+      "name": "postgres-creation",
+      "passed": true,
+      "seconds": 15
+    },
+    {
+      "name": "account-tokens",
+      "passed": true,
+      "seconds": 1
+    },
+    {
+      "name": "runtime-config",
+      "passed": true,
+      "seconds": 0
+    },
+    {
+      "name": "companion-store",
+      "passed": true,
+      "seconds": 1
+    },
+    {
+      "name": "capsule-store",
+      "passed": true,
+      "seconds": 0
+    },
+    {
+      "name": "lifecycle-store",
+      "passed": true,
+      "seconds": 1
+    },
+    {
+      "name": "api",
+      "passed": true,
+      "seconds": 7
+    },
+    {
+      "name": "account",
+      "passed": true,
+      "seconds": 12
+    },
+    {
+      "name": "couple",
+      "passed": true,
+      "seconds": 28
+    },
+    {
+      "name": "e2e",
+      "passed": true,
+      "seconds": 21
+    },
+    {
+      "name": "import",
+      "passed": true,
+      "seconds": 13
+    },
+    {
+      "name": "privacy",
+      "passed": true,
+      "seconds": 15
+    },
+    {
+      "name": "lifecycle",
+      "passed": true,
+      "seconds": 11
+    },
+    {
+      "name": "ai",
+      "passed": true,
+      "seconds": 37
+    },
+    {
+      "name": "care",
+      "passed": true,
+      "seconds": 12
+    },
+    {
+      "name": "creation",
+      "passed": true,
+      "seconds": 10
+    },
+    {
+      "name": "a11y",
+      "passed": true,
+      "seconds": 28
+    },
+    {
+      "name": "compat",
+      "passed": true,
+      "seconds": 23
+    },
+    {
+      "name": "performance",
+      "passed": true,
+      "seconds": 7
+    },
+    {
+      "name": "visual",
+      "passed": true,
+      "seconds": 50
+    },
+    {
+      "name": "release",
+      "passed": true,
+      "seconds": 7
+    },
+    {
+      "name": "reminders",
+      "passed": true,
+      "seconds": 0
+    },
+    {
+      "name": "care-store",
+      "passed": true,
+      "seconds": 0
+    },
+    {
+      "name": "build",
+      "passed": true,
+      "seconds": 2
+    },
+    {
+      "name": "pwa",
+      "passed": true,
+      "seconds": 14
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "dataset": {
+    "records": 1000,
+    "plans": 500,
+    "journals": 300
+  },
+  "previewMs": 75,
+  "restoreMs": 103,
+  "persistMs": 14,
+  "restoreMaxLongTaskMs": 0,
+  "reloadMs": 209,
+  "memoriesMs": 423,
+  "searchMs": 58,
+  "plannerMs": 142,
+  "createMs": 85,
+  "saveMs": 1314,
+  "exportMs": 40,
+  "backupBytes": 1005345,
+  "workflowMaxLongTaskMs": 245,
+  "environment": "macOS 本机，Chromium Playwright，2026-10-31"
+}

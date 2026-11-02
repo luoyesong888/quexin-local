@@ -1,0 +1,8 @@
+{
+  "date": "2026-10-30T03:19:49.383Z",
+  "webStatus": 200,
+  "formalApiProxy": false,
+  "mockApiProxy": false,
+  "hostUsedForTest": "127.0.0.1",
+  "scope": "验证纯前端预览未代理本机 API；不是手机真机网络测试。"
+}

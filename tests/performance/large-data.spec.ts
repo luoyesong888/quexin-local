@@ -1,0 +1,30 @@
+import {test,expect} from '@playwright/test'
+import {readFile} from 'node:fs/promises'
+import {initialStore} from '../../src/data'
+
+function largeStore(){
+  const store=structuredClone(initialStore),day=(index:number)=>String(index%28+1).padStart(2,'0')
+  store.records=Array.from({length:1000},(_,index)=>({id:`perf-record-${index}`,title:`大数据回忆 ${String(index).padStart(4,'0')}`,body:`这是第 ${index} 条用于性能验收的共同回忆。${'普通日子的细节也值得被认真保存。'.repeat(8)}`,date:`2026-${String(index%10+1).padStart(2,'0')}-${day(index)}`,kind:'回忆' as const,source:`性能测试批次 · 第 ${index+1} 行`,status:'confirmed' as const,sensitive:index%50===0}))
+  store.plans=Array.from({length:500},(_,index)=>({id:`perf-plan-${index}`,title:`性能计划 ${String(index).padStart(4,'0')}`,date:`2026-11-${day(index)}`,time:`${String(index%24).padStart(2,'0')}:00`,kind:index%3===0?'心愿' as const:index%3===1?'计划' as const:'待办' as const,status:'todo' as const,timezone:'Asia/Shanghai',recurrence:'none' as const,reminderMinutes:null,completedOccurrences:[]}))
+  store.journals=Array.from({length:300},(_,index)=>({id:`perf-journal-${index}`,title:`性能文字 ${String(index).padStart(4,'0')}`,body:`这是一篇用于大数据恢复与导出的文字。${'保存以后仍然可以继续编辑。'.repeat(8)}`,type:index%3===0?'信件' as const:index%3===1?'日常' as const:'年度回顾' as const,date:`2026-10-${day(index)}`}))
+  store.logs=[];store.settings={...store.settings,onboardingCompleted:true,sampleMode:false,reduceMotion:true}
+  return store
+}
+
+test('大备份恢复、搜索、切页、保存、刷新和导出满足本机预算',async({page},testInfo)=>{
+  const metrics:Record<string,number>={},store=largeStore(),backup=Buffer.from(JSON.stringify(store))
+  await page.goto('/');await page.getByRole('button',{name:'先用虚构资料体验完整功能'}).click();await page.goto('/#settings');await page.getByRole('button',{name:'数据与备份',exact:true}).click()
+  await page.evaluate(()=>{(window as any).__quexinLongTasks=[];new PerformanceObserver(list=>(window as any).__quexinLongTasks.push(...list.getEntries().map(entry=>entry.duration))).observe({entryTypes:['longtask']})})
+  let started=performance.now();await page.getByLabel('选择 JSON 备份文件').setInputFiles({name:'large-quexin-backup.json',mimeType:'application/json',buffer:backup});const restore=page.getByRole('dialog',{name:'恢复这份备份？'});await expect(restore).toContainText('1000 条记录');metrics.previewMs=Math.round(performance.now()-started)
+  started=performance.now();await restore.getByRole('button',{name:'确认恢复'}).click();await expect(page.locator('.life-backup-stats')).toContainText('1000');await expect(page.locator('.life-backup-stats')).toContainText('300');metrics.restoreMs=Math.round(performance.now()-started)
+  started=performance.now();await expect.poll(async()=>await page.locator('.topbar').innerText()).toContain('IndexedDB 已就绪');metrics.persistMs=Math.round(performance.now()-started)
+  metrics.restoreMaxLongTaskMs=Math.round(await page.evaluate(()=>Math.max(0,...((window as any).__quexinLongTasks??[]))));started=performance.now();await page.reload();await page.getByRole('button',{name:'数据与备份',exact:true}).click();await expect(page.locator('.life-backup-stats')).toContainText('1000');metrics.reloadMs=Math.round(performance.now()-started);await page.evaluate(()=>{(window as any).__quexinLongTasks=[];new PerformanceObserver(list=>(window as any).__quexinLongTasks.push(...list.getEntries().map(entry=>entry.duration))).observe({entryTypes:['longtask']})})
+  started=performance.now();await page.goto('/#memories');await expect(page.getByLabel('搜索回忆')).toBeVisible();metrics.memoriesMs=Math.round(performance.now()-started)
+  started=performance.now();await page.getByLabel('搜索回忆').fill('大数据回忆 0999');await expect(page.getByRole('main')).toContainText('大数据回忆 0999');metrics.searchMs=Math.round(performance.now()-started)
+  started=performance.now();await page.goto('/#planner');await expect(page.getByRole('main')).toContainText('性能计划 0499');metrics.plannerMs=Math.round(performance.now()-started)
+  started=performance.now();await page.goto('/#create');await expect(page.getByRole('main')).toContainText('性能文字 0297');metrics.createMs=Math.round(performance.now()-started)
+  started=performance.now();await page.goto('/#memories');await page.getByRole('button',{name:'写一条回忆',exact:true}).click();const editor=page.getByRole('dialog',{name:'写下值得记住的事'});await editor.getByLabel('标题',{exact:true}).fill('大数据之后新增的回忆');await editor.getByLabel('内容',{exact:true}).fill('在已有一千条记录后继续保存。');await editor.getByRole('button',{name:'保存记录'}).click();await expect(page.getByRole('main')).toContainText('大数据之后新增的回忆');metrics.saveMs=Math.round(performance.now()-started)
+  await page.goto('/#settings');await page.getByRole('button',{name:'数据与备份',exact:true}).click();started=performance.now();const downloading=page.waitForEvent('download');await page.getByRole('button',{name:'导出完整备份'}).click();const download=await downloading,path=await download.path();expect(path).toBeTruthy();const exported=await readFile(path!);metrics.exportMs=Math.round(performance.now()-started);metrics.backupBytes=exported.byteLength;const parsed=JSON.parse(exported.toString());expect(parsed.records).toHaveLength(1001);expect(parsed.plans).toHaveLength(500);expect(parsed.journals).toHaveLength(300)
+  metrics.workflowMaxLongTaskMs=Math.round(await page.evaluate(()=>Math.max(0,...((window as any).__quexinLongTasks??[]))));expect(metrics.previewMs).toBeLessThan(3000);expect(metrics.restoreMs).toBeLessThan(5000);expect(metrics.persistMs).toBeLessThan(5000);expect(metrics.reloadMs).toBeLessThan(5000);expect(metrics.memoriesMs).toBeLessThan(4000);expect(metrics.searchMs).toBeLessThan(2000);expect(metrics.plannerMs).toBeLessThan(5000);expect(metrics.createMs).toBeLessThan(4000);expect(metrics.saveMs).toBeLessThan(3000);expect(metrics.exportMs).toBeLessThan(4000);expect(metrics.backupBytes).toBeLessThan(5_000_000);expect(metrics.restoreMaxLongTaskMs).toBeLessThan(1000);expect(metrics.workflowMaxLongTaskMs).toBeLessThan(1000)
+  await testInfo.attach('performance-metrics.json',{body:JSON.stringify(metrics,null,2),contentType:'application/json'});await page.screenshot({path:testInfo.outputPath('large-data.png'),fullPage:true,animations:'disabled'})
+})

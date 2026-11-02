@@ -1,0 +1,10 @@
+{
+  "date": "2026-10-30T02:51:52.167Z",
+  "url": "http://127.0.0.1:4188/",
+  "webStatus": 200,
+  "api": {
+    "status": "ok",
+    "database": "postgres"
+  },
+  "usesExistingDatabase": true
+}

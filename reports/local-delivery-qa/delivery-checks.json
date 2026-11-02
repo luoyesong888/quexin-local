@@ -1,0 +1,20 @@
+{
+  "date": "2026-10-30T02:51:47.583Z",
+  "runtimeIntegration": {
+    "passed": true,
+    "cases": [
+      "初始化",
+      "重复启停",
+      "旧锁恢复",
+      "端口冲突拒绝且不结束其他进程",
+      "重启账号保留",
+      "停机备份",
+      "损坏校验",
+      "新数据库恢复",
+      "媒体和密钥恢复",
+      "原数据库保留"
+    ]
+  },
+  "browserBackupRestore": true,
+  "slowWrites": true
+}

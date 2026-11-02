@@ -1,0 +1,215 @@
+{
+  "date": "2026-11-02T09:05:17.599Z",
+  "results": [
+    {
+      "name": "postgres-init",
+      "passed": true,
+      "seconds": 2
+    },
+    {
+      "name": "postgres-start",
+      "passed": true,
+      "seconds": 1
+    },
+    {
+      "name": "maintenance",
+      "passed": true,
+      "seconds": 0
+    },
+    {
+      "name": "notification-json",
+      "passed": true,
+      "seconds": 3
+    },
+    {
+      "name": "operations-permissions",
+      "passed": true,
+      "seconds": 0
+    },
+    {
+      "name": "local-runtime",
+      "passed": true,
+      "seconds": 19
+    },
+    {
+      "name": "postgres-api",
+      "passed": true,
+      "seconds": 5
+    },
+    {
+      "name": "postgres-lifecycle",
+      "passed": true,
+      "seconds": 10
+    },
+    {
+      "name": "postgres-care",
+      "passed": true,
+      "seconds": 9
+    },
+    {
+      "name": "postgres-creation",
+      "passed": true,
+      "seconds": 11
+    },
+    {
+      "name": "account-tokens",
+      "passed": true,
+      "seconds": 0
+    },
+    {
+      "name": "runtime-config",
+      "passed": true,
+      "seconds": 0
+    },
+    {
+      "name": "workbuddy-preflight",
+      "passed": true,
+      "seconds": 1
+    },
+    {
+      "name": "workbuddy-deploy",
+      "passed": true,
+      "seconds": 21
+    },
+    {
+      "name": "release-bundle",
+      "passed": true,
+      "seconds": 2
+    },
+    {
+      "name": "workbuddy-options",
+      "passed": true,
+      "seconds": 0
+    },
+    {
+      "name": "assistant-admin-config",
+      "passed": true,
+      "seconds": 0
+    },
+    {
+      "name": "qingniao-skill",
+      "passed": true,
+      "seconds": 0
+    },
+    {
+      "name": "workbuddy-config",
+      "passed": true,
+      "seconds": 15
+    },
+    {
+      "name": "workbuddy-lifecycle",
+      "passed": true,
+      "seconds": 45
+    },
+    {
+      "name": "companion-store",
+      "passed": true,
+      "seconds": 1
+    },
+    {
+      "name": "capsule-store",
+      "passed": true,
+      "seconds": 0
+    },
+    {
+      "name": "lifecycle-store",
+      "passed": true,
+      "seconds": 1
+    },
+    {
+      "name": "api",
+      "passed": true,
+      "seconds": 4
+    },
+    {
+      "name": "account",
+      "passed": true,
+      "seconds": 11
+    },
+    {
+      "name": "couple",
+      "passed": true,
+      "seconds": 27
+    },
+    {
+      "name": "e2e",
+      "passed": true,
+      "seconds": 20
+    },
+    {
+      "name": "import",
+      "passed": true,
+      "seconds": 12
+    },
+    {
+      "name": "privacy",
+      "passed": true,
+      "seconds": 11
+    },
+    {
+      "name": "lifecycle",
+      "passed": true,
+      "seconds": 8
+    },
+    {
+      "name": "ai",
+      "passed": true,
+      "seconds": 56
+    },
+    {
+      "name": "care",
+      "passed": true,
+      "seconds": 8
+    },
+    {
+      "name": "creation",
+      "passed": true,
+      "seconds": 10
+    },
+    {
+      "name": "a11y",
+      "passed": true,
+      "seconds": 28
+    },
+    {
+      "name": "compat",
+      "passed": true,
+      "seconds": 20
+    },
+    {
+      "name": "performance",
+      "passed": true,
+      "seconds": 7
+    },
+    {
+      "name": "visual",
+      "passed": true,
+      "seconds": 49
+    },
+    {
+      "name": "release",
+      "passed": true,
+      "seconds": 7
+    },
+    {
+      "name": "reminders",
+      "passed": true,
+      "seconds": 0
+    },
+    {
+      "name": "care-store",
+      "passed": true,
+      "seconds": 0
+    },
+    {
+      "name": "build",
+      "passed": true,
+      "seconds": 2
+    },
+    {
+      "name": "pwa",
+      "passed": true,
+      "seconds": 12
+    }
+  ]
+}

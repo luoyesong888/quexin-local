@@ -1,0 +1,130 @@
+{
+  "date": "2026-10-30T21:29:33.995Z",
+  "results": [
+    {
+      "name": "postgres-init",
+      "passed": true,
+      "seconds": 1
+    },
+    {
+      "name": "postgres-start",
+      "passed": true,
+      "seconds": 1
+    },
+    {
+      "name": "maintenance",
+      "passed": true,
+      "seconds": 0
+    },
+    {
+      "name": "notification-json",
+      "passed": true,
+      "seconds": 1
+    },
+    {
+      "name": "postgres-api",
+      "passed": true,
+      "seconds": 4
+    },
+    {
+      "name": "postgres-lifecycle",
+      "passed": true,
+      "seconds": 9
+    },
+    {
+      "name": "postgres-care",
+      "passed": true,
+      "seconds": 7
+    },
+    {
+      "name": "account-tokens",
+      "passed": true,
+      "seconds": 0
+    },
+    {
+      "name": "companion-store",
+      "passed": true,
+      "seconds": 0
+    },
+    {
+      "name": "lifecycle-store",
+      "passed": true,
+      "seconds": 1
+    },
+    {
+      "name": "api",
+      "passed": true,
+      "seconds": 4
+    },
+    {
+      "name": "account",
+      "passed": true,
+      "seconds": 8
+    },
+    {
+      "name": "couple",
+      "passed": true,
+      "seconds": 25
+    },
+    {
+      "name": "e2e",
+      "passed": true,
+      "seconds": 19
+    },
+    {
+      "name": "import",
+      "passed": true,
+      "seconds": 11
+    },
+    {
+      "name": "privacy",
+      "passed": true,
+      "seconds": 12
+    },
+    {
+      "name": "lifecycle",
+      "passed": true,
+      "seconds": 8
+    },
+    {
+      "name": "ai",
+      "passed": true,
+      "seconds": 30
+    },
+    {
+      "name": "care",
+      "passed": true,
+      "seconds": 7
+    },
+    {
+      "name": "visual",
+      "passed": true,
+      "seconds": 52
+    },
+    {
+      "name": "release",
+      "passed": true,
+      "seconds": 9
+    },
+    {
+      "name": "reminders",
+      "passed": true,
+      "seconds": 0
+    },
+    {
+      "name": "care-store",
+      "passed": true,
+      "seconds": 0
+    },
+    {
+      "name": "build",
+      "passed": true,
+      "seconds": 2
+    },
+    {
+      "name": "pwa",
+      "passed": true,
+      "seconds": 15
+    }
+  ]
+}

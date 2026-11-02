@@ -1,0 +1,12 @@
+{
+  "standard": "WCAG 2.2 A/AA automated axe checks",
+  "passed": 22,
+  "failed": 0,
+  "scopes": {
+    "pages": 8,
+    "themes": 10,
+    "keyboard_focus_visual_reflow": 4
+  },
+  "disabledRules": [],
+  "manualAuditStillRequired": true
+}

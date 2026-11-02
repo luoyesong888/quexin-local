@@ -1,0 +1,4 @@
+import {createCipheriv,createDecipheriv,createHash,randomBytes} from 'node:crypto'
+const key=secret=>{if(!secret)throw new Error('安全胶囊需要 CAPSULE_ENCRYPTION_KEY');return createHash('sha256').update(`quexin-capsule-v1:${secret}`).digest()}
+export function encryptCapsule(text,secret){const iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',key(secret),iv),ciphertext=Buffer.concat([cipher.update(text,'utf8'),cipher.final()]);return{ciphertext:ciphertext.toString('base64'),iv:iv.toString('base64'),authTag:cipher.getAuthTag().toString('base64')}}
+export function decryptCapsule(value,secret){const decipher=createDecipheriv('aes-256-gcm',key(secret),Buffer.from(value.iv,'base64'));decipher.setAuthTag(Buffer.from(value.authTag??value.auth_tag,'base64'));return Buffer.concat([decipher.update(Buffer.from(value.ciphertext,'base64')),decipher.final()]).toString('utf8')}

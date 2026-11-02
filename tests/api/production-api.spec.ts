@@ -1,0 +1,298 @@
+import { expect, test, type APIRequestContext, type APIResponse, type Playwright } from '@playwright/test'
+import { createHash } from 'node:crypto'
+import { readFile } from 'node:fs/promises'
+import { gunzipSync } from 'node:zlib'
+import { z } from 'zod'
+
+const problem = z.object({ code: z.string(), message: z.string(), requestId: z.string(), fieldErrors: z.record(z.string(), z.string()).optional(), retryAfterSeconds: z.number().optional() })
+const session = z.object({ userId: z.string().uuid(), displayName: z.string(), email: z.string().email(), emailVerified: z.boolean(), sessionId: z.string().uuid(), expiresAt: z.string().datetime() })
+const member = z.object({ spaceId: z.string().uuid(), userId: z.string().uuid(), role: z.enum(['owner', 'partner']), displayName: z.string(), joinedAt: z.string().datetime() })
+const space = z.object({ id: z.string().uuid(), name: z.string(), createdAt: z.string().datetime(), revision: z.number() })
+
+async function api<T extends z.ZodTypeAny>(response: APIResponse, data: T) {
+  const json: unknown = await response.json()
+  const envelope = z.union([z.object({ ok: z.literal(true), data, requestId: z.string() }), z.object({ ok: z.literal(false), error: problem })]).parse(json)
+  return envelope as z.infer<typeof envelope>
+}
+async function register(context: APIRequestContext, name: string) {
+  const email = `user-${crypto.randomUUID()}@example.test`
+  const response = await context.post('/v1/auth/register', { data: { email, password: 'correct-horse-2026', displayName: name } })
+  expect(response.status()).toBe(201)
+  const result = await api(response, session)
+  if (!result.ok) throw new Error(result.error.message)
+  const mail=await api(await context.get(`/v1/dev/mailbox/latest?email=${encodeURIComponent(email)}&purpose=verify_email`),z.object({token:z.string(),expiresAt:z.string()}))
+  if(!mail.ok)throw new Error(mail.error.message)
+  const verified=await api(await context.post('/v1/auth/email/verify',{data:{token:mail.data.token}}),z.object({verified:z.boolean()}))
+  if(!verified.ok)throw new Error(verified.error.message)
+  const refreshed=await api(await context.get('/v1/session'),session)
+  if(!refreshed.ok)throw new Error(refreshed.error.message)
+  return { email, session: refreshed.data }
+}
+const API_ORIGIN = process.env.API_ORIGIN ?? 'http://127.0.0.1:4193'
+async function newContext(playwright: Playwright) { return playwright.request.newContext({ baseURL: API_ORIGIN, extraHTTPHeaders: { 'content-type': 'application/json' } }) }
+
+test.describe.configure({ mode: 'serial' })
+
+test('注册校验、HttpOnly 会话和退出', async ({ request }) => {
+  expect((await api(await request.get('/v1/auth/config'),z.object({developmentMailbox:z.boolean()}))).ok).toBe(true)
+  const unauthenticatedResend=await request.post('/v1/auth/email/verify/request')
+  expect(unauthenticatedResend.status()).toBe(401);expect((await api(unauthenticatedResend,z.never())).ok).toBe(false)
+  const invalid = await request.post('/v1/auth/register', { data: { email: 'bad', password: 'short', displayName: '' } })
+  expect(invalid.status()).toBe(400)
+  const invalidBody = await api(invalid, z.never())
+  expect(invalidBody.ok).toBe(false)
+  if (!invalidBody.ok) expect(invalidBody.error.fieldErrors).toMatchObject({ email: expect.any(String), password: expect.any(String), displayName: expect.any(String) })
+
+  const email=`auth-${crypto.randomUUID()}@example.test`
+  const created = await request.post('/v1/auth/register', { data: { email, password: 'correct-horse-2026', displayName: '认证测试' } })
+  expect(created.status()).toBe(201)
+  const createdBody = await api(created, session)
+  expect(createdBody.ok).toBe(true)
+  expect(createdBody.ok&&createdBody.data.emailVerified).toBe(false)
+  const cookie = created.headers()['set-cookie']
+  expect(cookie).toContain('HttpOnly')
+  expect(cookie).toContain('SameSite=Lax')
+
+  const current = await request.get('/v1/session')
+  expect(current.status()).toBe(200)
+  expect((await api(current, session)).ok).toBe(true)
+  const maintenanceSchema=z.union([z.null(),z.object({id:z.number(),startedAt:z.string(),completedAt:z.string(),status:z.string(),expiredExports:z.number(),deletedSpaces:z.number(),removedMedia:z.number(),expiredSessions:z.number(),expiredTokens:z.number()})])
+  expect((await api(await request.get('/v1/maintenance/status'),maintenanceSchema)).ok).toBe(true)
+  expect((await api(await request.get('/v1/system/alerts'),z.array(z.object({id:z.number(),severity:z.string(),source:z.string(),code:z.string(),message:z.string(),createdAt:z.string()})))).ok).toBe(true)
+  const notificationSchema=z.array(z.object({id:z.string(),recipient:z.string(),kind:z.string(),status:z.string(),attempts:z.number(),createdAt:z.string(),sentAt:z.string().nullable().optional(),lastAttemptAt:z.string().nullable().optional(),lastError:z.string().nullable().optional(),provider:z.string().nullable().optional(),providerMessageId:z.string().nullable().optional(),accepted:z.array(z.string()).nullable().optional(),rejected:z.array(z.string()).nullable().optional()}).strict())
+  const notifications=await api(await request.get('/v1/notifications'),notificationSchema);expect(notifications.ok&&notifications.data.some(item=>item.kind==='verify_email')).toBe(true)
+  const blockedSpace=await request.post('/v1/spaces',{data:{name:'未验证空间',selfDisplayName:'认证测试'}})
+  expect(blockedSpace.status()).toBe(403);expect((await api(blockedSpace,z.never())).ok).toBe(false)
+  const mail=await api(await request.get(`/v1/dev/mailbox/latest?email=${encodeURIComponent(email)}&purpose=verify_email`),z.object({token:z.string(),expiresAt:z.string()}))
+  if(!mail.ok)throw new Error(mail.error.message)
+  expect((await api(await request.post('/v1/auth/email/verify',{data:{token:mail.data.token}}),z.object({verified:z.boolean()}))).ok).toBe(true)
+  const verifiedSession=await api(await request.get('/v1/session'),session)
+  expect(verifiedSession.ok&&verifiedSession.data.emailVerified).toBe(true)
+  const logout = await request.post('/v1/auth/logout')
+  expect(logout.status()).toBe(200)
+  expect((await api(logout, z.object({ loggedOut: z.boolean() }))).ok).toBe(true)
+  expect(logout.headers()['set-cookie']).toContain('Max-Age=0')
+  expect((await request.get('/v1/session')).status()).toBe(401)
+})
+
+test('重复邮箱、错误密码和 SQL 注入样式输入均安全失败', async ({ playwright }) => {
+  const context = await newContext(playwright)
+  const email = `duplicate-${crypto.randomUUID()}@example.test`
+  expect((await api(await context.post('/v1/auth/register', { data: { email, password: 'correct-horse-2026', displayName: '第一个账号' } }), session)).ok).toBe(true)
+  const duplicate = await context.post('/v1/auth/register', { data: { email: email.toUpperCase(), password: 'another-pass-2026', displayName: '重复账号' } })
+  expect(duplicate.status()).toBe(409)
+  const duplicateBody = await api(duplicate, z.never())
+  expect(!duplicateBody.ok && duplicateBody.error.code).toBe('EMAIL_EXISTS')
+  expect((await api(await context.post('/v1/auth/logout'), z.object({ loggedOut: z.boolean() }))).ok).toBe(true)
+  const wrong = await context.post('/v1/auth/login', { data: { email, password: 'wrong-password' } })
+  expect(wrong.status()).toBe(401)
+  expect((await api(wrong, z.never())).ok).toBe(false)
+  const injection = await context.post('/v1/auth/login', { data: { email: "' OR 1=1 --@example.test", password: 'correct-horse-2026' } })
+  expect(injection.status()).toBe(401)
+  expect((await api(injection, z.never())).ok).toBe(false)
+  const valid = await context.post('/v1/auth/login', { data: { email, password: 'correct-horse-2026' } })
+  expect(valid.status()).toBe(200)
+  expect((await api(valid, session)).ok).toBe(true)
+  await context.dispose()
+})
+
+test('情侣邀请、两人上限和第三人权限', async ({ playwright }) => {
+  const [a, b, c] = await Promise.all([newContext(playwright), newContext(playwright), newContext(playwright)])
+  await register(a, '甲'); await register(b, '乙'); await register(c, '第三人')
+  const created = await a.post('/v1/spaces', { data: { name: '正式测试空间', selfDisplayName: '甲' } })
+  const createdBody = await api(created, z.object({ space, member }))
+  if (!createdBody.ok) throw new Error(createdBody.error.message)
+  const spaceId = createdBody.data.space.id
+  const inviteResponse = await a.post(`/v1/spaces/${spaceId}/invites`, { data: { ttlHours: 1 } })
+  const inviteBody = await api(inviteResponse, z.object({ id: z.string().uuid(), code: z.string().length(6), spaceId: z.string().uuid(), status: z.string(), expiresAt: z.string().datetime(), createdBy: z.string().uuid() }))
+  if (!inviteBody.ok) throw new Error(inviteBody.error.message)
+  const accepted = await b.post(`/v1/invites/${inviteBody.data.code}/accept`, { data: { displayName: '乙' } })
+  expect(accepted.status()).toBe(200)
+  expect((await api(accepted, z.object({ space, members: z.array(member).length(2) }))).ok).toBe(true)
+  const deniedRead = await c.get(`/v1/spaces/${spaceId}/members`)
+  expect(deniedRead.status()).toBe(403); expect((await api(deniedRead, z.never())).ok).toBe(false)
+  const deniedWrite = await c.post(`/v1/spaces/${spaceId}/sync`, { data: { commands: [] } })
+  expect(deniedWrite.status()).toBe(403); expect((await api(deniedWrite, z.never())).ok).toBe(false)
+  await Promise.all([a.dispose(), b.dispose(), c.dispose()])
+})
+
+test('同步幂等、私人隔离和版本冲突', async ({ playwright }) => {
+  const [a, b] = await Promise.all([newContext(playwright), newContext(playwright)])
+  await register(a, '同步甲'); await register(b, '同步乙')
+  const createdBody = await api(await a.post('/v1/spaces', { data: { name: '同步空间', selfDisplayName: '同步甲' } }), z.object({ space, member }))
+  if (!createdBody.ok) throw new Error(createdBody.error.message)
+  const spaceId = createdBody.data.space.id
+  const invite = await api(await a.post(`/v1/spaces/${spaceId}/invites`, { data: { ttlHours: 1 } }), z.object({ code: z.string(), id: z.string(), spaceId: z.string(), status: z.string(), expiresAt: z.string(), createdBy: z.string() }))
+  if (!invite.ok) throw new Error(invite.error.message)
+  expect((await api(await b.post(`/v1/invites/${invite.data.code}/accept`, { data: { displayName: '同步乙' } }), z.object({ space, members: z.array(member).length(2) }))).ok).toBe(true)
+  const entityId = crypto.randomUUID(), commandId = crypto.randomUUID()
+  const command = { commandId, entity: 'record', entityId, operation: 'create', expectedRevision: null, payload: { title: '共享回忆', body: '正文', date: '2026-10-28', kind: '回忆', source: '测试', status: 'confirmed', visibility: 'shared' }, clientTime: new Date().toISOString() }
+  const syncSchema = z.object({ accepted: z.array(z.object({ commandId: z.string(), entityId: z.string(), revision: z.number(), updatedAt: z.string() })), conflicts: z.array(z.any()), cursor: z.string() })
+  const changeSchema = z.object({ records: z.array(z.object({ id: z.string() }).passthrough()), plans: z.array(z.any()), journals: z.array(z.any()), events: z.array(z.any()), nextCursor: z.string() })
+  const first = await api(await a.post(`/v1/spaces/${spaceId}/sync`, { data: { commands: [command] } }), syncSchema)
+  const repeat = await api(await a.post(`/v1/spaces/${spaceId}/sync`, { data: { commands: [command] } }), syncSchema)
+  expect(first.ok && repeat.ok && first.data.accepted[0].revision === repeat.data.accepted[0].revision).toBe(true)
+  const changes = await b.get(`/v1/spaces/${spaceId}/changes`)
+  expect((await api(changes, changeSchema)).ok).toBe(true)
+  const update = { ...command, commandId: crypto.randomUUID(), operation: 'update', expectedRevision: 1, payload: { ...command.payload, title: '伴侣修改' } }
+  expect((await api(await b.post(`/v1/spaces/${spaceId}/sync`, { data: { commands: [update] } }), syncSchema)).ok).toBe(true)
+  const stale = await api(await a.post(`/v1/spaces/${spaceId}/sync`, { data: { commands: [{ ...update, commandId: crypto.randomUUID(), payload: { ...command.payload, title: '过期修改' } }] } }), syncSchema)
+  expect(stale.ok && stale.data.conflicts[0].actualRevision).toBe(2)
+  const privateId = crypto.randomUUID()
+  expect((await api(await a.post(`/v1/spaces/${spaceId}/sync`, { data: { commands: [{ ...command, commandId: crypto.randomUUID(), entityId: privateId, payload: { ...command.payload, title: '私人回忆', visibility: 'private' } }] } }), syncSchema)).ok).toBe(true)
+  const partnerAll = await b.get(`/v1/spaces/${spaceId}/changes?cursor=0`)
+  const partnerBody = await api(partnerAll, changeSchema)
+  expect(partnerBody.ok && partnerBody.data.records.some(item => item.id === privateId)).toBe(false)
+  const statusSchema=z.object({cursor:z.string(),entities:z.object({record:z.number(),plan:z.number(),journal:z.number()}),pendingUploads:z.number(),readyMedia:z.number()})
+  const status=await api(await a.get(`/v1/spaces/${spaceId}/sync/status`),statusSchema)
+  expect(status.ok&&status.data.entities.record).toBeGreaterThanOrEqual(2)
+  await Promise.all([a.dispose(), b.dispose()])
+})
+
+test('图片上传会校验、清洗、生成缩略图并执行空间权限',async({playwright})=>{
+  const [a,b,c]=await Promise.all([newContext(playwright),newContext(playwright),newContext(playwright)])
+  await register(a,'媒体甲');await register(b,'媒体乙');await register(c,'空间外用户')
+  const created=await api(await a.post('/v1/spaces',{data:{name:'媒体空间',selfDisplayName:'媒体甲'}}),z.object({space,member}))
+  if(!created.ok)throw new Error(created.error.message)
+  const spaceId=created.data.space.id
+  const invite=await api(await a.post(`/v1/spaces/${spaceId}/invites`,{data:{ttlHours:1}}),z.object({code:z.string(),id:z.string(),spaceId:z.string(),status:z.string(),expiresAt:z.string(),createdBy:z.string()}))
+  if(!invite.ok)throw new Error(invite.error.message)
+  expect((await b.post(`/v1/invites/${invite.data.code}/accept`,{data:{displayName:'媒体乙'}})).status()).toBe(200)
+  const image=await readFile('public/assets/coast.jpg'),sha256=createHash('sha256').update(image).digest('hex')
+  const grantSchema=z.object({mediaId:z.string().uuid(),uploadUrl:z.string(),method:z.literal('PUT'),headers:z.record(z.string(),z.string()),expiresAt:z.string().datetime()})
+  const invalid=await a.post(`/v1/spaces/${spaceId}/uploads`,{data:{filename:'bad.svg',contentType:'image/svg+xml',size:12,sha256:'bad',scope:'shared'}})
+  expect(invalid.status()).toBe(400);expect((await api(invalid,z.never())).ok).toBe(false)
+  const grant=await api(await a.post(`/v1/spaces/${spaceId}/uploads`,{data:{filename:'海边.jpg',contentType:'image/jpeg',size:image.length,sha256,scope:'shared'}}),grantSchema)
+  if(!grant.ok)throw new Error(grant.error.message)
+  const damaged=Buffer.from(image);damaged[damaged.length-1]^=1
+  const rejected=await a.put(grant.data.uploadUrl,{data:damaged,headers:{'content-type':'image/jpeg'}})
+  expect(rejected.status()).toBe(400);expect((await api(rejected,z.never())).ok).toBe(false)
+  const readySchema=z.object({mediaId:z.string().uuid(),status:z.literal('ready'),privateUrl:z.string(),thumbnailUrl:z.string(),width:z.number(),height:z.number()})
+  const ready=await api(await a.put(grant.data.uploadUrl,{data:image,headers:{'content-type':'image/jpeg'}}),readySchema)
+  if(!ready.ok)throw new Error(ready.error.message)
+  expect(ready.data.width).toBeLessThanOrEqual(2400);expect(ready.data.height).toBeLessThanOrEqual(2400)
+  const ownerThumbnail=await a.get(ready.data.thumbnailUrl)
+  expect(ownerThumbnail.status()).toBe(200);expect(ownerThumbnail.headers()['content-type']).toBe('image/webp');expect((await ownerThumbnail.body()).length).toBeGreaterThan(100)
+  expect((await b.get(ready.data.privateUrl)).status()).toBe(200)
+  expect((await c.get(ready.data.privateUrl)).status()).toBe(404)
+  const attachedRecordId=`record-${crypto.randomUUID()}`
+  const privateGrant=await api(await a.post(`/v1/spaces/${spaceId}/uploads`,{data:{filename:'只给自己.jpg',contentType:'image/jpeg',size:image.length,sha256,scope:'private',entityType:'record',entityId:attachedRecordId}}),grantSchema)
+  if(!privateGrant.ok)throw new Error(privateGrant.error.message)
+  const privateReady=await api(await a.put(privateGrant.data.uploadUrl,{data:image,headers:{'content-type':'image/jpeg'}}),readySchema)
+  if(!privateReady.ok)throw new Error(privateReady.error.message)
+  expect((await a.get(privateReady.data.privateUrl)).status()).toBe(200)
+  expect((await b.get(privateReady.data.privateUrl)).status()).toBe(404)
+  const completed=await a.post(`/v1/spaces/${spaceId}/uploads/${privateReady.data.mediaId}/complete`)
+  expect((await api(completed,z.object({mediaId:z.string().uuid(),privateUrl:z.string(),thumbnailUrl:z.string()}))).ok).toBe(true)
+  const deniedDelete=await b.delete(privateReady.data.privateUrl);expect(deniedDelete.status()).toBe(404);expect((await api(deniedDelete,z.never())).ok).toBe(false)
+  const deletedSchema=z.object({mediaId:z.string().uuid(),deleted:z.boolean()})
+  expect((await api(await a.delete(privateReady.data.privateUrl),deletedSchema)).ok).toBe(true)
+  expect((await api(await a.delete(privateReady.data.privateUrl),deletedSchema)).ok).toBe(true)
+  const deniedCleanup=await b.post(`/v1/spaces/${spaceId}/media/cleanup`);expect(deniedCleanup.status()).toBe(403);expect((await api(deniedCleanup,z.never())).ok).toBe(false)
+  const cleanupSchema=z.object({removed:z.number().int().nonnegative()})
+  const cleaned=await api(await a.post(`/v1/spaces/${spaceId}/media/cleanup`),cleanupSchema);expect(cleaned.ok&&cleaned.data.removed).toBeGreaterThanOrEqual(1)
+  const cleanedAgain=await api(await a.post(`/v1/spaces/${spaceId}/media/cleanup`),cleanupSchema);expect(cleanedAgain.ok&&cleanedAgain.data.removed).toBe(0)
+  const deletedRead=await a.get(privateReady.data.privateUrl);expect(deletedRead.status()).toBe(404);expect((await api(deletedRead,z.never())).ok).toBe(false)
+  const purgedDelete=await a.delete(privateReady.data.privateUrl);expect(purgedDelete.status()).toBe(404);expect((await api(purgedDelete,z.never())).ok).toBe(false)
+  await Promise.all([a.dispose(),b.dispose(),c.dispose()])
+})
+
+test('正式数据包按权限导出，删除预约可撤销且永久删除清理空间与文件',async({playwright})=>{
+  const [owner,partner,outsider]=await Promise.all([newContext(playwright),newContext(playwright),newContext(playwright)])
+  await register(owner,'导出甲');await register(partner,'导出乙');await register(outsider,'空间外')
+  const created=await api(await owner.post('/v1/spaces',{data:{name:'导出与删除验收空间',selfDisplayName:'导出甲'}}),z.object({space,member}));if(!created.ok)throw new Error(created.error.message)
+  const spaceId=created.data.space.id,spaceName=created.data.space.name
+  const invite=await api(await owner.post(`/v1/spaces/${spaceId}/invites`,{data:{ttlHours:1}}),z.object({code:z.string(),id:z.string(),spaceId:z.string(),status:z.string(),expiresAt:z.string(),createdBy:z.string()}));if(!invite.ok)throw new Error(invite.error.message)
+  expect((await api(await partner.post(`/v1/invites/${invite.data.code}/accept`,{data:{displayName:'导出乙'}}),z.object({space,members:z.array(member).length(2)}))).ok).toBe(true)
+  const sharedId=crypto.randomUUID(),privateId=crypto.randomUUID(),command=(id:string)=>({commandId:crypto.randomUUID(),entity:'record',entityId:id,operation:'create',expectedRevision:null,payload:{id,title:id===sharedId?'共享导出记录':'甲的私人导出记录',body:'导出正文',date:'2026-10-29',kind:'回忆',source:'生命周期测试',status:'confirmed',visibility:id===sharedId?'shared':'private'},clientTime:new Date().toISOString()})
+  const syncSchema=z.object({accepted:z.array(z.any()),conflicts:z.array(z.any()),cursor:z.string()})
+  expect((await api(await owner.post(`/v1/spaces/${spaceId}/sync`,{data:{commands:[command(sharedId),command(privateId)]}}),syncSchema)).ok).toBe(true)
+  const image=await readFile('public/assets/coast.jpg'),sha256=createHash('sha256').update(image).digest('hex'),grantSchema=z.object({mediaId:z.string(),uploadUrl:z.string(),method:z.literal('PUT'),headers:z.record(z.string(),z.string()),expiresAt:z.string()})
+  const grant=await api(await owner.post(`/v1/spaces/${spaceId}/uploads`,{data:{filename:'导出照片.jpg',contentType:'image/jpeg',size:image.length,sha256,scope:'shared',entityType:'record',entityId:sharedId}}),grantSchema);if(!grant.ok)throw new Error(grant.error.message)
+  const ready=await api(await owner.put(grant.data.uploadUrl,{data:image,headers:{'content-type':'image/jpeg'}}),z.object({mediaId:z.string(),status:z.literal('ready'),privateUrl:z.string(),thumbnailUrl:z.string(),width:z.number(),height:z.number()}));if(!ready.ok)throw new Error(ready.error.message)
+  const exportSchema=z.object({jobId:z.string().uuid(),status:z.literal('ready'),expiresAt:z.string(),downloadUrl:z.string(),sha256:z.string().length(64),byteSize:z.number().positive()})
+  const ownerExport=await api(await owner.post(`/v1/spaces/${spaceId}/exports`),exportSchema);if(!ownerExport.ok)throw new Error(ownerExport.error.message)
+  const download=await owner.get(ownerExport.data.downloadUrl);expect(download.status()).toBe(200);expect(download.headers()['content-type']).toBe('application/gzip');expect(download.headers()['content-disposition']).toContain('attachment')
+  const bundle=z.object({format:z.literal('quexin-space-export'),version:z.literal(1),exportedAt:z.string(),space:z.object({id:z.string()}),members:z.array(z.any()),records:z.array(z.object({id:z.string(),title:z.string()}).passthrough()),plans:z.array(z.any()),journals:z.array(z.any()),media:z.array(z.object({id:z.string(),originalBase64:z.string().min(100),thumbnailBase64:z.string().min(100)}).passthrough())}).parse(JSON.parse(gunzipSync(await download.body()).toString('utf8')))
+  expect(bundle.records.some(item=>item.id===privateId)).toBe(true);expect(bundle.media[0]?.id).toBe(ready.data.mediaId)
+  const partnerExport=await api(await partner.post(`/v1/spaces/${spaceId}/exports`),exportSchema);if(!partnerExport.ok)throw new Error(partnerExport.error.message)
+  const partnerDownload=await partner.get(partnerExport.data.downloadUrl),partnerBundle=JSON.parse(gunzipSync(await partnerDownload.body()).toString('utf8'));expect(partnerBundle.records.some(item=>item.id===privateId)).toBe(false)
+  const outsideExport=await outsider.post(`/v1/spaces/${spaceId}/exports`);expect(outsideExport.status()).toBe(403);expect((await api(outsideExport,z.never())).ok).toBe(false)
+  const partnerSchedule=await partner.delete(`/v1/spaces/${spaceId}`,{data:{confirmation:spaceName}});expect(partnerSchedule.status()).toBe(403);expect((await api(partnerSchedule,z.never())).ok).toBe(false)
+  const mismatch=await owner.delete(`/v1/spaces/${spaceId}`,{data:{confirmation:'错误名称'}});expect(mismatch.status()).toBe(400);expect((await api(mismatch,z.never())).ok).toBe(false)
+  const scheduledSchema=z.object({deletionId:z.string().uuid(),scheduledAt:z.string()})
+  expect((await api(await owner.delete(`/v1/spaces/${spaceId}`,{data:{confirmation:spaceName}}),scheduledSchema)).ok).toBe(true)
+  const statusSchema=z.object({id:z.string(),spaceId:z.string(),requestedBy:z.string(),scheduledAt:z.string(),createdAt:z.string(),cancelledAt:z.nullable(z.string())})
+  expect((await api(await partner.get(`/v1/spaces/${spaceId}/deletion`),statusSchema)).ok).toBe(true)
+  expect((await api(await owner.post(`/v1/spaces/${spaceId}/deletion/cancel`),statusSchema)).ok).toBe(true)
+  expect((await api(await owner.get(`/v1/spaces/${spaceId}/deletion`),z.null())).ok).toBe(true)
+  expect((await api(await owner.delete(`/v1/spaces/${spaceId}`,{data:{confirmation:spaceName}}),scheduledSchema)).ok).toBe(true)
+  const deniedNow=await partner.delete(`/v1/spaces/${spaceId}/deletion/now`,{data:{confirmation:`永久删除 ${spaceName}`}});expect(deniedNow.status()).toBe(403);expect((await api(deniedNow,z.never())).ok).toBe(false)
+  const wrongNow=await owner.delete(`/v1/spaces/${spaceId}/deletion/now`,{data:{confirmation:spaceName}});expect(wrongNow.status()).toBe(400);expect((await api(wrongNow,z.never())).ok).toBe(false)
+  expect((await api(await owner.delete(`/v1/spaces/${spaceId}/deletion/now`,{data:{confirmation:`永久删除 ${spaceName}`}}),z.object({deleted:z.boolean(),spaceId:z.string()}))).ok).toBe(true)
+  expect((await api(await owner.get('/v1/spaces/current'),z.null())).ok).toBe(true)
+  const goneExport=await owner.get(ownerExport.data.downloadUrl);expect(goneExport.status()).toBe(404);expect((await api(goneExport,z.never())).ok).toBe(false)
+  const goneMedia=await owner.get(ready.data.privateUrl);expect(goneMedia.status()).toBe(404);expect((await api(goneMedia,z.never())).ok).toBe(false)
+  await Promise.all([owner.dispose(),partner.dispose(),outsider.dispose()])
+})
+
+test('忘记密码令牌单次使用并撤销旧会话', async ({ playwright }) => {
+  const context=await newContext(playwright)
+  const {email}=await register(context,'重置测试')
+  expect((await api(await context.post('/v1/auth/password/forgot',{data:{email}}),z.object({sent:z.boolean()}))).ok).toBe(true)
+  const mail=await api(await context.get(`/v1/dev/mailbox/latest?email=${encodeURIComponent(email)}&purpose=reset_password`),z.object({token:z.string(),expiresAt:z.string()}))
+  if(!mail.ok)throw new Error(mail.error.message)
+  expect((await api(await context.post('/v1/auth/password/reset',{data:{token:mail.data.token,password:'new-correct-horse-2026'}}),z.object({reset:z.boolean()}))).ok).toBe(true)
+  expect((await context.get('/v1/session')).status()).toBe(401)
+  const reused=await context.post('/v1/auth/password/reset',{data:{token:mail.data.token,password:'other-correct-horse-2026'}})
+  expect(reused.status()).toBe(400);expect((await api(reused,z.never())).ok).toBe(false)
+  expect((await context.post('/v1/auth/login',{data:{email,password:'correct-horse-2026'}})).status()).toBe(401)
+  expect((await api(await context.post('/v1/auth/login',{data:{email,password:'new-correct-horse-2026'}}),session)).ok).toBe(true)
+  await context.dispose()
+})
+
+test('登录设备可查看并单独撤销', async ({playwright})=>{
+  const [first,second]=await Promise.all([newContext(playwright),newContext(playwright)])
+  const {email}=await register(first,'设备测试')
+  expect((await api(await second.post('/v1/auth/login',{data:{email,password:'correct-horse-2026'}}),session)).ok).toBe(true)
+  const deviceSchema=z.array(z.object({id:z.string().uuid(),userAgent:z.string(),createdAt:z.string(),lastSeenAt:z.string(),expiresAt:z.string(),current:z.boolean()}))
+  const devices=await api(await first.get('/v1/auth/sessions'),deviceSchema)
+  if(!devices.ok)throw new Error(devices.error.message)
+  expect(devices.data.length).toBe(2)
+  const other=devices.data.find(item=>!item.current)
+  expect(other).toBeTruthy()
+  expect((await api(await first.delete(`/v1/auth/sessions/${other!.id}`),z.object({revoked:z.boolean(),current:z.boolean()}))).ok).toBe(true)
+  expect((await second.get('/v1/session')).status()).toBe(401)
+  expect((await first.get('/v1/session')).status()).toBe(200)
+  await Promise.all([first.dispose(),second.dispose()])
+})
+
+test('共同空间操作校验、身份绑定和幂等',async({playwright})=>{
+  const owner=await newContext(playwright),outside=await newContext(playwright)
+  try{
+    const identity=await register(owner,'宠物甲');await register(outside,'空间外')
+    const created=await api(await owner.post('/v1/spaces',{data:{name:'接口鹊巢',selfDisplayName:'宠物甲'}}),z.object({space,member}));if(!created.ok)throw new Error(created.error.message)
+    const path=`/v1/spaces/${created.data.space.id}/companion`
+    const stateSchema=z.object({revision:z.number(),profile:z.object({ownerName:z.string(),partnerName:z.string(),since:z.string()}),pet:z.object({name:z.string(),feathers:z.number()}).passthrough(),events:z.array(z.object({id:z.string(),actorId:z.string(),actorName:z.string(),kind:z.string(),at:z.string(),text:z.string()}))})
+    const denied=await outside.get(path);expect(denied.status()).toBe(403);expect((await api(denied,z.never())).ok).toBe(false)
+    const mismatched=await owner.post(`${path}/actions`,{data:{commandId:crypto.randomUUID(),kind:'feed',expectedUserId:crypto.randomUUID()}});expect(mismatched.status()).toBe(403);expect((await api(mismatched,z.never())).ok).toBe(false)
+    const invalid=await owner.post(`${path}/actions`,{data:{commandId:'invalid',kind:'feed'}});expect(invalid.status()).toBe(400);expect((await api(invalid,z.never())).ok).toBe(false)
+    const action={commandId:crypto.randomUUID(),kind:'feed',expectedUserId:identity.session.userId}
+    const first=await api(await owner.post(`${path}/actions`,{data:action}),stateSchema);const retry=await api(await owner.post(`${path}/actions`,{data:action}),stateSchema)
+    expect(first.ok&&first.data.pet.feathers).toBe(3);expect(retry.ok&&retry.data.revision).toBe(1)
+    const mismatchSync=await owner.post(`/v1/spaces/${created.data.space.id}/sync`,{data:{commands:[],expectedUserId:crypto.randomUUID()}});expect(mismatchSync.status()).toBe(403);expect((await api(mismatchSync,z.never())).ok).toBe(false)
+  }finally{await owner.dispose();await outside.dispose()}
+})
+
+test('登录接口达到限制后返回 429 与 retryAfterSeconds', async ({ playwright }) => {
+  const context = await newContext(playwright)
+  let limited: APIResponse | null = null
+  for (let index = 0; index < 20; index += 1) {
+    const response = await context.post('/v1/auth/login', { data: { email: 'none@example.test', password: 'invalid-password' } })
+    if (response.status() === 429) { limited = response; break }
+  }
+  expect(limited).not.toBeNull()
+  const result = await api(limited!, z.never())
+  expect(!result.ok && result.error.retryAfterSeconds).toBeGreaterThan(0)
+  await context.dispose()
+})

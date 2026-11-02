@@ -1,0 +1,15 @@
+{
+  "model": {
+    "enabled": false,
+    "provider": "openai-compatible",
+    "apiUrl": "",
+    "apiKey": "",
+    "model": "",
+    "transcriptionModel": ""
+  },
+  "mail": {
+    "mode": "local",
+    "smtpUrl": "",
+    "from": ""
+  }
+}

@@ -1,0 +1,6 @@
+const escapeHtml=value=>String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))
+export function renderNotification(kind,payload,{origin='http://127.0.0.1:4188'}={}){
+  const expires=new Date(payload.expiresAt).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'}),token=String(payload.token??''),action=kind==='verify_email'?'验证邮箱':'重置密码',url=`${origin.replace(/\/$/,'')}/#account/${kind==='verify_email'?'verify':'reset'}?token=${encodeURIComponent(token)}`
+  if(kind==='system_alert')return{subject:`[鹊信告警] ${payload.code??'SYSTEM_ALERT'}`,text:`${payload.message}\n\n${JSON.stringify(payload.details??{},null,2)}`,html:`<h2>鹊信系统告警</h2><p>${escapeHtml(payload.message)}</p><pre>${escapeHtml(JSON.stringify(payload.details??{},null,2))}</pre>`}
+  return{subject:`鹊信 · ${action}`,text:`请打开以下链接完成${action}：\n${url}\n\n令牌将在 ${expires} 失效。如果不是你本人操作，请忽略。`,html:`<div style="font-family:system-ui;max-width:560px;margin:auto;padding:32px"><h1 style="font-size:24px">鹊信</h1><p>请点击按钮完成${action}。</p><p><a href="${escapeHtml(url)}" style="display:inline-block;padding:12px 20px;background:#9f4735;color:white;text-decoration:none;border-radius:6px">${action}</a></p><p style="color:#777;font-size:13px">链接将在 ${escapeHtml(expires)} 失效。如果不是你本人操作，请忽略。</p></div>`}
+}

@@ -1,0 +1,13 @@
+{
+  "date": "2026-10-31T08:00:25.572Z",
+  "node": "v22.22.3",
+  "dependencyInstall": "npm ci --offline",
+  "build": true,
+  "initialize": true,
+  "start": true,
+  "webStatus": 200,
+  "database": "postgres",
+  "stop": true,
+  "pathWithSpaces": true,
+  "scope": "当前电脑上的全新项目副本和新数据库；不是另一台电脑或另一种操作系统。"
+}

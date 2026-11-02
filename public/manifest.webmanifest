@@ -1,0 +1,26 @@
+{
+  "id": "/",
+  "name": "鹊信",
+  "short_name": "鹊信",
+  "description": "把重要的人，好好记得。珍藏日常的双人生活空间。",
+  "lang": "zh-CN",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "theme_color": "#f6f0e5",
+  "background_color": "#f6f0e5",
+  "icons": [
+    {
+      "src": "/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

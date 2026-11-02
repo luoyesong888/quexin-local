@@ -1,0 +1,6 @@
+interface:
+  display_name: "青鸟 Agent"
+  short_description: "编排回忆、计划、日历与邮件草稿的可审批本地工作流"
+  default_prompt: "Use $qingniao-agent to chat naturally and turn my instructions into approval-first product actions."
+policy:
+  allow_implicit_invocation: true

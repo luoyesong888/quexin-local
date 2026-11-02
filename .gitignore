@@ -1,0 +1,36 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+.workbuddy-options.local.json
+.playwright-cli/
+.backups/
+
+# 鹊信真实资料必须位于源码仓库之外
+quexin-data/
+*.sqlite
+*.sqlite3
+backups/
+exports/
+sources/
+derived/
+.local-data/
+test-results/
+playwright-report/
+release/artifacts/
+reports/**/*.png
+reports/**/*.jpg
+reports/**/*.jpeg
+reports/**/*.webm
+reports/**/*.zip
+ux-audit-*-evidence/
+video-production/raw/
+video-production/exports/
+
+# 本机导入的私人聊天与编辑器临时文件
+public/zhuleyi/
+src/styles.css*

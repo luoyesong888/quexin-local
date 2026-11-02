@@ -1,0 +1,145 @@
+{
+  "date": "2026-10-31T01:30:09.553Z",
+  "results": [
+    {
+      "name": "postgres-init",
+      "passed": true,
+      "seconds": 2
+    },
+    {
+      "name": "postgres-start",
+      "passed": true,
+      "seconds": 2
+    },
+    {
+      "name": "maintenance",
+      "passed": true,
+      "seconds": 0
+    },
+    {
+      "name": "notification-json",
+      "passed": true,
+      "seconds": 1
+    },
+    {
+      "name": "postgres-api",
+      "passed": true,
+      "seconds": 6
+    },
+    {
+      "name": "postgres-lifecycle",
+      "passed": true,
+      "seconds": 11
+    },
+    {
+      "name": "postgres-care",
+      "passed": true,
+      "seconds": 10
+    },
+    {
+      "name": "postgres-creation",
+      "passed": true,
+      "seconds": 12
+    },
+    {
+      "name": "account-tokens",
+      "passed": true,
+      "seconds": 0
+    },
+    {
+      "name": "companion-store",
+      "passed": true,
+      "seconds": 1
+    },
+    {
+      "name": "capsule-store",
+      "passed": true,
+      "seconds": 0
+    },
+    {
+      "name": "lifecycle-store",
+      "passed": true,
+      "seconds": 1
+    },
+    {
+      "name": "api",
+      "passed": true,
+      "seconds": 6
+    },
+    {
+      "name": "account",
+      "passed": true,
+      "seconds": 11
+    },
+    {
+      "name": "couple",
+      "passed": true,
+      "seconds": 25
+    },
+    {
+      "name": "e2e",
+      "passed": true,
+      "seconds": 21
+    },
+    {
+      "name": "import",
+      "passed": true,
+      "seconds": 15
+    },
+    {
+      "name": "privacy",
+      "passed": true,
+      "seconds": 13
+    },
+    {
+      "name": "lifecycle",
+      "passed": true,
+      "seconds": 10
+    },
+    {
+      "name": "ai",
+      "passed": true,
+      "seconds": 36
+    },
+    {
+      "name": "care",
+      "passed": true,
+      "seconds": 9
+    },
+    {
+      "name": "creation",
+      "passed": true,
+      "seconds": 10
+    },
+    {
+      "name": "visual",
+      "passed": true,
+      "seconds": 53
+    },
+    {
+      "name": "release",
+      "passed": true,
+      "seconds": 8
+    },
+    {
+      "name": "reminders",
+      "passed": true,
+      "seconds": 0
+    },
+    {
+      "name": "care-store",
+      "passed": true,
+      "seconds": 0
+    },
+    {
+      "name": "build",
+      "passed": true,
+      "seconds": 3
+    },
+    {
+      "name": "pwa",
+      "passed": true,
+      "seconds": 15
+    }
+  ]
+}
