@@ -36,6 +36,7 @@ try{
  await check('qingniao-skill',process.execPath,['--test','tests/qingniao-skill-package.test.mjs'])
  await check('workbuddy-config',process.execPath,['--test','tests/workbuddy-config.test.mjs'])
  await check('workbuddy-lifecycle',process.execPath,['--test','tests/workbuddy-lifecycle.test.mjs'])
+ await check('workbuddy-chat-contract',process.execPath,['--test','tests/workbuddy-chat-contract.test.mjs'])
  await check('companion-store',process.execPath,['--test','tests/companion-store.test.mjs'],configuration?{ACCOUNT_TEST_DATABASE_URL:configuration.adminUrl}:{})
  await check('capsule-store',process.execPath,['--test','tests/capsule-store.test.mjs'],configuration?{CAPSULE_TEST_DATABASE_URL:configuration.databaseUrl}:{})
  await check('lifecycle-store',process.execPath,['--test','tests/lifecycle-store.test.mjs'],configuration?{LIFECYCLE_TEST_DATABASE_URL:configuration.databaseUrl,LIFECYCLE_ADMIN_URL:configuration.adminUrl}:{})

@@ -1,0 +1,8 @@
+export type WorkBuddyChatMedia={path:string;mime:string;size:number;sha256:string}
+export type WorkBuddyChatMessage={conversationId:string;messageId:string;senderId:string;senderLabel:string;timestamp:string;timezone:string;sequence:number;text:string;mediaRefs:WorkBuddyChatMedia[]}
+export type WorkBuddyChatManifest={format:'quexin-workbuddy-chat-v1';jobId:string;batchId:string;spaceId:string;conversationId:string;sourceApp:'wechat';extractorVersion:string;createdAt:string;timezone:string;participants:Array<{id:string;label:string}>;range:{from:string;to:string};totals:{messages:number;media:number};chunks:Array<{file:string;count:number;sha256:string}>;media:WorkBuddyChatMedia[];status:'ready'}
+export const WORKBUDDY_CHAT_FORMAT:'quexin-workbuddy-chat-v1'
+export const WORKBUDDY_CHAT_LIMITS:Readonly<{messages:number;media:number;chunkMessages:number;mediaBytes:number;totalBytes:number}>
+export function validateWorkBuddyChatManifest(value:unknown):{ok:boolean;errors:string[]}
+export function normalizeLegacyChat(value:unknown,options?:{conversationId?:string;selfLabel?:string;partnerLabel?:string;timezone?:string;mediaByLegacyPath?:Map<string,WorkBuddyChatMedia>}):{messages:WorkBuddyChatMessage[];participants:Array<{id:string;label:string}>;range:{from:string;to:string}}
+export function convertLegacyWorkBuddyExport(options:{sourceDir:string;inboxRoot:string;spaceId:string;conversationId:string;extractorVersion?:string;jobId?:string;batchId?:string;createdAt?:string;timezone?:string;dryRun?:boolean}):Promise<{manifest:WorkBuddyChatManifest;summary:Record<string,unknown>}>

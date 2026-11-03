@@ -19,11 +19,12 @@ Ordinary conversation is a core Agent behavior, not a forced Skill run. Answer g
 4. Pause before every write or external action. Show the proposed fields, audience, provider, reversibility, and privacy impact.
 5. Resume only the approved proposal. Record the actual result; never infer success from a draft or model response.
 
-Read [references/workflows.md](references/workflows.md) when routing or chaining Skills. Read [references/privacy-and-approval.md](references/privacy-and-approval.md) before any write, calendar, email, shared-space, or destructive action. The runtime catalog is [assets/catalog.json](assets/catalog.json).
+Read [references/workflows.md](references/workflows.md) when routing or chaining Skills. Read [references/privacy-and-approval.md](references/privacy-and-approval.md) before any write, calendar, email, shared-space, or destructive action. The runtime catalog is [assets/catalog.json](assets/catalog.json). The fixed WorkBuddy folder-handoff prompt is [assets/workbuddy-chat-folder-task.md](assets/workbuddy-chat-folder-task.md); it is a deployment asset, not an enabled runtime Skill.
 
 ## Hard boundaries
 
 - Do not scan WeChat, disk folders, email, or system calendars. “Discover” means inspect new material already imported into Qingniao. Enable a WeChat Skill only after a verified WorkBuddy extraction adapter is actually present.
+- Do not treat the folder-handoff task template as permission to extract a conversation. It may be used only after the user explicitly chooses the person, date range, message types, media scope, destination, and visibility.
 - Do not diagnose a relationship, decide who is right, score loyalty, impersonate either person, or invent facts without cited sources.
 - Do not automatically save a memory, create a plan, send email, or write a calendar. Draft first and wait for approval.
 - Never request or expose the model API key. The key is managed by the local server configuration.

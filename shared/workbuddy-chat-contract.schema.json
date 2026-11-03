@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quexin.local/schema/workbuddy-chat-v1.json",
+  "title": "Quexin WorkBuddy Chat Handoff v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "jobId", "batchId", "spaceId", "conversationId", "sourceApp", "extractorVersion", "createdAt", "timezone", "participants", "range", "totals", "chunks", "media", "status"],
+  "properties": {
+    "format": {"const": "quexin-workbuddy-chat-v1"},
+    "jobId": {"$ref": "#/$defs/id"},
+    "batchId": {"$ref": "#/$defs/id"},
+    "spaceId": {"$ref": "#/$defs/id"},
+    "conversationId": {"$ref": "#/$defs/id"},
+    "sourceApp": {"const": "wechat"},
+    "extractorVersion": {"type": "string", "minLength": 1, "maxLength": 80},
+    "createdAt": {"type": "string", "format": "date-time"},
+    "timezone": {"type": "string", "minLength": 1, "maxLength": 80},
+    "participants": {"type": "array", "minItems": 1, "maxItems": 20, "items": {"type": "object", "additionalProperties": false, "required": ["id", "label"], "properties": {"id": {"$ref": "#/$defs/id"}, "label": {"type": "string", "minLength": 1, "maxLength": 80}}}},
+    "range": {"type": "object", "additionalProperties": false, "required": ["from", "to"], "properties": {"from": {"type": "string", "format": "date"}, "to": {"type": "string", "format": "date"}}},
+    "totals": {"type": "object", "additionalProperties": false, "required": ["messages", "media"], "properties": {"messages": {"type": "integer", "minimum": 0, "maximum": 200000}, "media": {"type": "integer", "minimum": 0, "maximum": 10000}}},
+    "chunks": {"type": "array", "minItems": 1, "items": {"type": "object", "additionalProperties": false, "required": ["file", "count", "sha256"], "properties": {"file": {"$ref": "#/$defs/path"}, "count": {"type": "integer", "minimum": 0, "maximum": 1000}, "sha256": {"$ref": "#/$defs/sha256"}}}},
+    "media": {"type": "array", "maxItems": 10000, "items": {"type": "object", "additionalProperties": false, "required": ["path", "mime", "size", "sha256"], "properties": {"path": {"$ref": "#/$defs/path"}, "mime": {"type": "string", "pattern": "^image/"}, "size": {"type": "integer", "minimum": 0, "maximum": 26214400}, "sha256": {"$ref": "#/$defs/sha256"}}}},
+    "status": {"const": "ready"}
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"},
+    "path": {"type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$"},
+    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+  }
+}
