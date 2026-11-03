@@ -79,7 +79,7 @@ export class WorkBuddyInbox {
   }catch(cause){if(cause.code!=='ENOENT')item.isolationError=inboxError(cause)}
   await this.save(state)
  }
- async scan({signal}={}){
+ async scan({signal,manifestOnly=false}={}){
   try{return await this.exclusive(async()=>{
    if(!this.config.enabled){this.health={status:'disabled'};return{ok:true,health:this.health,batches:[]}}
    await this.checkFolders();const state=await this.state();let discovered=0,invalidEntry=false
@@ -94,7 +94,9 @@ export class WorkBuddyInbox {
      const {manifest,digest}=await inspectBatch(root,{spaceId:this.spaceId,batchId,limits:this.limits})
      if(item.digest!==digest){item.digest=digest;item.approval=null;item.verified=null;this.transition(item,'waiting')}
      item.counts={messages:manifest.totals.messages,media:manifest.totals.media,chunks:manifest.chunks.length}
+     item.summary={conversationId:manifest.conversationId,participants:manifest.participants,range:manifest.range,timezone:manifest.timezone}
      await this.save(state)
+     if(manifestOnly)continue
      if(item.approval?.digest!==digest)continue
      if(item.status==='completed')continue
      if(item.status==='ready'&&item.verified?.stamp===await batchStamp(root,this.limits))continue
@@ -140,7 +142,26 @@ export class WorkBuddyInbox {
  }
  async archive(batchId,{signal,onProgress}={}){
   if(!chatId(batchId))throw new InboxError('UNSAFE_PATH')
+  return this.exclusive(()=>this.archiveLocked(batchId,{signal,onProgress}))
+ }
+ // One lock covers approval and consumption so the monitor cannot steal a UI job.
+ async receive(batchId,digest,{signal,onProgress}={}){
+  if(!chatId(batchId)||!/^([a-f0-9]{64})$/.test(digest??''))throw new InboxError('APPROVAL_REQUIRED')
   return this.exclusive(async()=>{
+   if(!this.config.enabled)throw new InboxError('APPROVAL_REQUIRED')
+   await this.checkFolders()
+   const state=await this.state(),item=state.entries[batchId]
+   if(!item||item.status==='failed'||item.digest!==digest)throw new InboxError('APPROVAL_REQUIRED')
+   const inspected=await inspectBatch(join(this.spaceRoot,'ready',batchId),{spaceId:this.spaceId,batchId,limits:this.limits})
+   if(inspected.digest!==digest)throw new InboxError('APPROVAL_REQUIRED')
+   signal?.throwIfAborted()
+   item.approval={digest,at:now(),ownerId:this.ownerId,archive:true}
+   // The archive worker validates every file before and inside its transaction.
+   this.transition(item,'ready');await this.save(state)
+   return this.archiveLocked(batchId,{signal,onProgress})
+  })
+ }
+ async archiveLocked(batchId,{signal,onProgress}={}){
    if(!this.config.enabled)throw new InboxError('APPROVAL_REQUIRED')
    const state=await this.state(),item=Object.hasOwn(state.entries,batchId)?state.entries[batchId]:null
    if(!item||!item.approval?.archive||item.approval.ownerId!==this.ownerId||item.approval.digest!==item.digest||!['ready','processing','completed'].includes(item.status))throw new InboxError('ARCHIVE_APPROVAL_REQUIRED')
@@ -160,7 +181,6 @@ export class WorkBuddyInbox {
     else await this.quarantine(item,state,error)
     throw error
    }
-  })
  }
  async synchronize({signal}={}){
   // Reconcile a committed transaction before touching source files after a crash.

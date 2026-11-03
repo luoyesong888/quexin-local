@@ -1,0 +1,13 @@
+.wb-chat-card{flex:none;min-width:0;padding:14px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:12px;line-height:1.7;overflow-wrap:anywhere}
+.wb-chat-card header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.wb-chat-card header strong{color:var(--accent)}
+.wb-chat-card p{margin:9px 0}.wb-chat-card small{display:block;color:var(--muted)}
+.wb-chat-card form,.wb-batch,.wb-excerpt,.wb-preview,.wb-candidate,.wb-original{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:8px}
+.wb-chat-card label{display:flex;flex-direction:column;gap:5px;margin:10px 0}.wb-chat-card input:not([type=checkbox]),.wb-chat-card select,.wb-chat-card textarea{width:100%;min-width:0;box-sizing:border-box;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--text);font:inherit}
+.wb-chat-card .wb-check{flex-direction:row;align-items:flex-start;gap:8px}.wb-check input{flex:none;margin-top:5px}
+.wb-chat-card blockquote{margin:9px 0;padding:9px;background:var(--soft);border-left:2px solid var(--accent);white-space:pre-wrap;overflow-wrap:anywhere}
+.wb-chat-card .btn{margin:7px 6px 3px 0;white-space:normal;min-height:36px;height:auto;font-size:11px}
+.wb-chat-card .text-link{font-size:11px;text-align:left;white-space:normal;display:inline-block;margin:5px 7px 3px 0}
+.wb-chat-card summary{cursor:pointer;color:var(--accent);margin:10px 0}.wb-chat-card .wb-error{color:var(--accent);padding:10px;background:var(--soft)}
+.wb-preview{border-color:var(--accent)}.wb-progress{position:sticky;bottom:0;padding:10px;background:var(--soft);border:1px solid var(--line);border-radius:8px;display:flex;align-items:center;justify-content:space-between}
+.wb-discovery{flex:none;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--soft);color:var(--accent);font:inherit;text-align:left}

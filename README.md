@@ -73,6 +73,9 @@ npm run local:start
 
 微信聊天提取是能力门禁，不是默认 Skill。当前没有经过来源、权限和失败回退验收的 WorkBuddy 聊天提取适配器，因此不会注册或伪装微信 Skill；将来适配器通过验证后再启用。
 
+WorkBuddy 文件夹交接已完成 F1–F4：登录后对青鸟说“检查 WorkBuddy 新聊天”，即可连接专用目录、确认批次、建立本机私人归档、检索聊天、选择片段整理并逐条保存。向 DeepSeek 等外部服务发送片段需要单次确认。未确认结果不写入浏览器资料库；保存的候选默认私密。该流程读取 WorkBuddy 导出的文件，不控制 WorkBuddy 或微信。见 [操作说明](DEPLOY_WITH_WORKBUDDY.md) 和 [F4 验收记录](reports/product-p13-f4-chat-qa.md)。
+
+
 Skill 包位于 `skills/qingniao-agent/`，采用 GitHub 上 [Agent Skills 开放规范](https://github.com/agentskills/agentskills/blob/main/docs/specification.mdx)；人工审批和可恢复执行借鉴 [LangGraph human-in-the-loop](https://github.com/langchain-ai/langgraphjs/blob/main/docs/docs/agents/human-in-the-loop.md)，项目没有新增 LangGraph 运行依赖。
 
 ## 保存、备份与恢复

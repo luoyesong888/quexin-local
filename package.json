@@ -85,7 +85,9 @@
     "test:final-local-release": "node scripts/test-final-local-release.mjs",
     "test:release-bundle": "node --test tests/release-bundle.test.mjs",
     "preview": "vite preview --host 127.0.0.1",
-    "preview:mobile": "env DISABLE_API_PROXY=true vite preview --host 0.0.0.0 --port 4189 --strictPort"
+    "preview:mobile": "env DISABLE_API_PROXY=true vite preview --host 0.0.0.0 --port 4189 --strictPort",
+    "test:workbuddy-chat-service": "node --test tests/workbuddy-chat-service.test.mjs",
+    "test:workbuddy-chat-ui": "playwright test --config playwright.workbuddy.config.ts"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",

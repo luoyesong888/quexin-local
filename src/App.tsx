@@ -48,7 +48,7 @@ function App({accountId=''}:{accountId?:string}){
  useReminderEngine(store.plans,item=>notify(`提醒：${item.title} · ${item.date} ${item.time}`))
  const update=(fn:(s:DemoStore)=>DemoStore,message:string)=>{setStore(s=>{const next=fn(s);return {...next,logs:[{id:makeId(),time:new Date().toISOString(),text:message},...next.logs].slice(0,100)}});notify(message)}
  const go=(next:PageId,target?:string)=>{if(next!==page||target!==intent)window.history.pushState({quexinIntent:target},'',`#${next}`);focusAfterNavigation.current=true;if(target)setNavigationRequest(value=>value+1);setIntent(target);setPage(next);setQuickCreateOpen(false);if(window.innerWidth<=1050)setAssistantOpen(false);workspace.current?.scrollTo({top:0})}
- const props:PageProps={store,setStore,update,notify,go,intent,petAction:companion.action,petGrowthSources:companion.growthSources}
+ const props:PageProps={accountId,store,setStore,update,notify,go,intent,petAction:companion.action,petGrowthSources:companion.growthSources}
  const pending=store.records.filter(r=>r.status==='pending')
  const storageLabel=persistence.status==='loading'?'正在打开资料库':persistence.status==='saving'?'正在保存':persistence.backend==='indexeddb'?'IndexedDB 已就绪':'兼容存储'
  const visibleNavigation=navigation.filter(n=>(n.id!=='care'||store.settings.moduleCare)&&(n.id!=='nest'||store.settings.modulePet))

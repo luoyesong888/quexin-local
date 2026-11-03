@@ -24,6 +24,7 @@ export interface DemoStore {
   logs:{id:string;time:string;text:string}[];
 }
 export interface PageProps {
+  accountId?:string;
   petAction?:(input:import('./companion-sync').PetActionInput)=>void;
   petGrowthSources?:Array<{sourceId:string;title:string;contribution:number;addedAt:string}>;
   store:DemoStore;

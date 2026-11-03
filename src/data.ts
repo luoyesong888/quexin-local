@@ -175,6 +175,12 @@ function strings(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === 'string')
 }
 
+function chatRefValid(value:unknown):boolean{
+ return value===undefined||(object(value)
+  && ['ownerId','spaceId','conversationId','messageId','timestamp','chunkFile','manifestDigest','extractorVersion'].every(key=>typeof value[key]==='string')
+  && Number.isSafeInteger(value.chunkLine)&&Number(value.chunkLine)>0)
+}
+
 function optionalDate(value: unknown): value is string {
   return value === '' || isDate(value)
 }
@@ -211,9 +217,10 @@ export function isDemoStore(value: unknown): value is DemoStore {
     && (record.sensitive === undefined || typeof record.sensitive === 'boolean')
     && (record.needsDateReview === undefined || typeof record.needsDateReview === 'boolean')
     && (record.provenance === undefined || (object(record.provenance)
-      && ['text','txt','json','csv','html','image-manual','image-ocr','audio-transcript','sample'].includes(String(record.provenance.type))
+      && ['text','txt','json','csv','html','image-manual','image-ocr','audio-transcript','sample','workbuddy-chat'].includes(String(record.provenance.type))
       && ['batchId','label','original','mapped','importedAt','baseDate'].every(key=>typeof (record.provenance as Record<string,unknown>)[key]==='string')
-      && typeof record.provenance.line==='number' && Number.isInteger(record.provenance.line) && record.provenance.line>0))
+      && typeof record.provenance.line==='number' && Number.isInteger(record.provenance.line) && record.provenance.line>0
+      && chatRefValid(record.provenance.chatRef)))
     && (record.entityVersion === undefined || typeof record.entityVersion === 'number')
     && (record.expectedVersion === undefined || typeof record.expectedVersion === 'number'))) return false
   if (!Array.isArray(plans) || !plans.every((plan) => itemHasId(plan) && optionalDate(plan.date)

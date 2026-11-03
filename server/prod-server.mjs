@@ -9,6 +9,7 @@ import {AssistantProvider,AssistantProviderError} from './lib/assistant-provider
 import {readAssistantAdminConfig,requestLocalRestart,saveAssistantAdminConfig} from './lib/optional-config.mjs'
 import {encryptCapsule,decryptCapsule} from './lib/capsule-crypto.mjs'
 import {startInboxMonitor} from './lib/workbuddy-inbox-monitor.mjs'
+import {WorkBuddyChatService,WorkBuddyChatError} from './lib/workbuddy-chat-service.mjs'
 import {dirname,resolve} from 'node:path'
 import {fileURLToPath} from 'node:url'
 import {
@@ -187,6 +188,16 @@ async function route(request, response) {
 
   const user = await requireUser(request, response, requestId)
   if (!user) return
+  if(request.method==='POST'&&path.startsWith('/v1/workbuddy/')){
+    if(!['127.0.0.1','::1','::ffff:127.0.0.1'].includes(clientIp(request)))return fail(response,403,'FORBIDDEN','聊天归档仅允许在运行鹊信的本机访问。',requestId)
+    const action=path.slice('/v1/workbuddy/'.length),retry=rateLimit(`workbuddy:${action}:${user.id}`,action==='connect'?8:120,15*60_000)
+    if(retry)return fail(response,429,'RATE_LIMITED','操作过于频繁，请稍后重试。',requestId,{retryAfterSeconds:retry})
+    const body=await bodyOf(request),controller=new AbortController()
+    request.once('aborted',()=>controller.abort());response.once('close',()=>{if(!response.writableEnded)controller.abort()})
+    try{const result=await workbuddyChat.run(action,body,user,{signal:controller.signal});if(!response.destroyed)return ok(response,result,requestId)}
+    catch(error){if(response.destroyed)return;if(error instanceof WorkBuddyChatError)return fail(response,error.status,error.code,error.message,requestId);return fail(response,503,'WORKBUDDY_UNAVAILABLE','聊天资料暂时不可用。',requestId)}
+    return
+  }
   if (request.method === 'GET' && path === '/v1/session') return ok(response, sessionView(user,user.session), requestId)
   if(request.method==='GET'&&path==='/v1/assistant/config')return ok(response,assistantProvider.publicConfig(),requestId)
   if(request.method==='GET'&&path==='/v1/admin/assistant-config')return ok(response,await readAssistantAdminConfig(),requestId)
@@ -418,6 +429,7 @@ const server = createServer((request, response) => { void route(request, respons
 }) })
 server.listen(port, host, () => console.log(`鹊信正式 API（${memory ? '内存测试' : 'PostgreSQL'}）：http://${host}:${port}`))
 const projectRoot=resolve(dirname(fileURLToPath(import.meta.url)),'..')
+const workbuddyChat=new WorkBuddyChatService({dataRoot:resolve(process.env.QUEXIN_LOCAL_DATA??resolve(projectRoot,'.local-data')),projectRoot,store,provider:assistantProvider,verifyPassword})
 const stopInboxMonitor=!memory&&['127.0.0.1','::1'].includes(host)&&process.env.DISABLE_BACKGROUND_WORKERS!=='true'
  ?startInboxMonitor({dataRoot:resolve(process.env.QUEXIN_LOCAL_DATA??resolve(projectRoot,'.local-data')),projectRoot}):()=>{}
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => {stopInboxMonitor();server.close(() => { void store.close().finally(() => process.exit(0)) })})

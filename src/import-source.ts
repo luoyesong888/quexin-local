@@ -1,12 +1,13 @@
 export type RecordProvenance = {
   batchId: string
-  type: 'text' | 'txt' | 'json' | 'csv' | 'html' | 'image-manual' | 'image-ocr' | 'audio-transcript' | 'sample'
+  type: 'text' | 'txt' | 'json' | 'csv' | 'html' | 'image-manual' | 'image-ocr' | 'audio-transcript' | 'sample' | 'workbuddy-chat'
   label: string
   line: number
   original: string
   mapped: string
   importedAt: string
   baseDate: string
+  chatRef?: {ownerId:string;spaceId:string;conversationId:string;messageId:string;timestamp:string;chunkFile:string;chunkLine:number;manifestDigest:string;extractorVersion:string}
 }
 export type ImportFileKind='image'|'audio'|'json'|'csv'|'html'|'text'|'unsupported'
 export function importFilePolicy(name:string,type:string):{kind:ImportFileKind;maximum:number}{
