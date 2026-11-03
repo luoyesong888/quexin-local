@@ -40,7 +40,7 @@ npm run local:start
 | --- | --- |
 | 今日 | 待确认候选、最近安排、回忆入口、宠物预览 |
 | 记录 | 手机统一新建回忆、整理聊天/照片、添加计划、写信、表达需要 |
-| 导入 | 粘贴、TXT/JSON、图片人工文字、人物映射、范围选择、候选编辑/确认/忽略 |
+| 青鸟「＋」与资料核对 | 添加 TXT/JSON/CSV/HTML、图片或录音，粘贴文字、人物映射、范围选择、候选编辑/确认/忽略；没有模型也可本机核对 |
 | 回忆 | 搜索、照片墙/时间线、编辑、来源追溯、删除、导出 |
 | 计划 | 日历、IANA 时区、日/周/月/年重复、实例完成、页内/浏览器提醒、完成后存成回忆 |
 | 关怀 | 双账号需要分享/更新/撤回/过期、私人草稿、周期日期和关怀日程 |
@@ -59,7 +59,7 @@ npm run local:start
 
 离线共同宠物操作在重新打开页面/恢复连接后重试。普通资料同步支持前台重试和受浏览器能力限制的 Service Worker；不承诺真实手机关闭应用后的自动调度。
 
-## 导入、检索与来源
+## 资料核对、检索与来源
 
 来源保留批次、文件或文本名称、整理文本行号、人物映射前后的文字及时间。编辑回忆正文不会覆盖导入依据。日期不明确与隐私提示分别处理；私人候选需单独确认，不自动生成共享日程。
 
@@ -73,8 +73,10 @@ npm run local:start
 
 微信聊天提取是能力门禁，不是默认 Skill。当前没有经过来源、权限和失败回退验收的 WorkBuddy 聊天提取适配器，因此不会注册或伪装微信 Skill；将来适配器通过验证后再启用。
 
-WorkBuddy 文件夹交接已完成 F1–F4：登录后对青鸟说“检查 WorkBuddy 新聊天”，即可连接专用目录、确认批次、建立本机私人归档、检索聊天、选择片段整理并逐条保存。向 DeepSeek 等外部服务发送片段需要单次确认。未确认结果不写入浏览器资料库；保存的候选默认私密。该流程读取 WorkBuddy 导出的文件，不控制 WorkBuddy 或微信。见 [操作说明](DEPLOY_WITH_WORKBUDDY.md) 和 [F4 验收记录](reports/product-p13-f4-chat-qa.md)。
+WorkBuddy 文件夹交接已完成 F1–F5：登录后对青鸟说“检查 WorkBuddy 新聊天”，即可连接专用目录、确认批次、建立本机私人归档、检索聊天、选择片段整理并逐条保存。向 DeepSeek 等外部服务发送片段需要单次确认。未确认结果不写入浏览器资料库；保存的候选默认私密。该流程读取 WorkBuddy 导出的文件，不控制 WorkBuddy 或微信。见 [操作说明](DEPLOY_WITH_WORKBUDDY.md) 和 [F4 验收记录](reports/product-p13-f4-chat-qa.md)。
 
+
+桌面一级导航已移除“导入”。统一从青鸟「＋」添加附件、粘贴文字或查看全部待确认候选，首页“核对全部”也可直接进入。旧 `#import` 链接、导入草稿和历史 Agent 的 `import` 目标仍然有效，页面显示为“资料核对”。附件可以只在本机核对；交给模型处理前必须单独勾选本次发送确认，识别失败后保留附件供手动处理。详见 [F5 验收记录](reports/product-p13-f5-entrypoints-qa.md)。
 
 Skill 包位于 `skills/qingniao-agent/`，采用 GitHub 上 [Agent Skills 开放规范](https://github.com/agentskills/agentskills/blob/main/docs/specification.mdx)；人工审批和可恢复执行借鉴 [LangGraph human-in-the-loop](https://github.com/langchain-ai/langgraphjs/blob/main/docs/docs/agents/human-in-the-loop.md)，项目没有新增 LangGraph 运行依赖。
 

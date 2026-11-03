@@ -49,7 +49,7 @@ test('日期核对与来源不被编辑正文改写，删除后旧回答立即�
   const candidate=page.getByRole('article',{name:/雪山/});await candidate.getByRole('button',{name:'确认保存'}).click()
   const editor=page.getByRole('dialog');await expect(editor).toBeVisible();await editor.getByLabel('日期',{exact:true}).fill('2026-10-15');await editor.getByRole('textbox',{name:'内容',exact:true}).fill('一起登上了雪山，看见云海。');await editor.getByRole('button',{name:'保存记录'}).click();await candidate.getByRole('button',{name:'确认保存'}).click()
   const answer=await ask(page,'第一次去雪山');await expect(answer).toContainText('不代表实际第一次');await answer.getByRole('button',{name:/查看引用/}).click();await expect(page.getByRole('region',{name:'记录来源'})).toContainText('我：一起登上了雪山。');await page.getByRole('button',{name:'关闭弹窗'}).click()
-  await page.getByRole('button',{name:/03 回忆/}).click();await page.getByRole('main').getByRole('button',{name:/一起登上了雪山/}).click();await page.getByRole('button',{name:'删除记录',exact:true}).click();await page.getByRole('button',{name:'确认删除',exact:true}).click()
+  await page.getByRole('button',{name:'回忆',exact:true}).click();await page.getByRole('main').getByRole('button',{name:/一起登上了雪山/}).click();await page.getByRole('button',{name:'删除记录',exact:true}).click();await page.getByRole('button',{name:'确认删除',exact:true}).click()
   await expect(page.getByLabel('青鸟回复').last()).toContainText('没有找到可引用');await expect(page.getByLabel('青鸟回复').last().getByRole('button',{name:/查看引用/})).toHaveCount(0)
 })
 
@@ -57,13 +57,13 @@ test('图片导入采用人工文字，设置说明模型、OCR 和微信的实�
   await start(page);await page.getByRole('tab',{name:/上传文件/}).click();await page.getByLabel('选择导入文件').setInputFiles('public/assets/coast.jpg')
   await expect(page.getByText('图片只在当前页面预览；可以发送到配置的识别模型，或手动填写文字。')).toBeVisible()
   await page.getByTestId('import-text').fill('我：2026-10-20，一起在海边拍照。');await page.getByRole('button',{name:'下一步，确认范围'}).click();await page.getByRole('button',{name:'生成候选',exact:true}).click();const candidate=page.getByRole('article',{name:/海边拍照/});await candidate.getByText('查看原文依据',{exact:false}).click();await expect(candidate).toContainText('图片文字为人工填写')
-  await page.getByRole('button',{name:/08 系统/}).click();await page.getByRole('button',{name:'空间与功能'}).click();const capabilities=page.getByRole('region',{name:'青鸟能力状态'});await expect(capabilities).toContainText('服务端尚未配置；不会产生外部模型请求');await expect(capabilities).toContainText('未连接微信账号')
+  await page.getByRole('button',{name:'系统',exact:true}).click();await page.getByRole('button',{name:'空间与功能'}).click();const capabilities=page.getByRole('region',{name:'青鸟能力状态'});await expect(capabilities).toContainText('服务端尚未配置；不会产生外部模型请求');await expect(capabilities).toContainText('未连接微信账号')
   await page.getByRole('radio',{name:/关闭自动整理/}).check();await expect(await ask(page,'海边')).toContainText('助手已关闭')
 })
 
 test('手机从记录入口导入新资料，青鸟回答可打开原文',async({page},testInfo)=>{
   await page.setViewportSize({width:390,height:844});await start(page)
-  await page.getByRole('button',{name:'记录一件事',exact:true}).click();await page.getByRole('button',{name:/整理聊天或照片/}).click()
+  await page.getByRole('button',{name:'记录一件事',exact:true}).click();await page.getByRole('button',{name:/整理聊天或照片/}).click();await page.getByRole('region',{name:'青鸟添加资料'}).getByRole('button',{name:'粘贴文字',exact:true}).click()
   await generate(page,'我：2026-10-21，一起去星河天文馆。')
   await page.getByRole('article',{name:/星河天文馆/}).getByRole('button',{name:'确认保存'}).click()
   const answer=await ask(page,'星河天文馆');await expect(answer).toContainText('2026-10-21');await answer.getByRole('button',{name:/查看引用/}).click()

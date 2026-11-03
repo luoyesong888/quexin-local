@@ -39,7 +39,7 @@ test('离线队列刷新恢复，冲突双版本可保留本机并重试',async(
     const mail=await dataOf(await partner.get(`/v1/dev/mailbox/latest?email=${encodeURIComponent(partnerEmail)}&purpose=verify_email`),z.object({token:z.string(),expiresAt:z.string()}))
     await dataOf(await partner.post('/v1/auth/email/verify',{data:{token:mail.token}}),z.object({verified:z.boolean()}))
     await dataOf(await partner.post(`/v1/invites/${invite.code}/accept`,{data:{displayName:'离线乙'}}),z.any())
-    await page.getByRole('button',{name:/03 回忆/}).click()
+    await page.getByRole('button',{name:'回忆',exact:true}).click()
     const command={commandId:crypto.randomUUID(),entity:'record',entityId:'memory-coast',operation:'update',expectedRevision:1,payload:{id:'memory-coast',title:'伴侣云端版海边回忆',body:'伴侣先保存的云端版本。',date:'2026-10-25',kind:'回忆',source:'E2E 伴侣端',status:'confirmed',visibility:'shared'},clientTime:new Date().toISOString()}
     const synced=await dataOf(await partner.post(`/v1/spaces/${current.space.id}/sync`,{data:{commands:[command]}}),z.object({accepted:z.array(z.object({commandId:z.string(),entityId:z.string(),revision:z.number(),updatedAt:z.string()})),conflicts:z.array(z.any()),cursor:z.string()}))
     expect(synced.accepted[0]?.revision).toBe(2)
@@ -53,7 +53,7 @@ test('离线队列刷新恢复，冲突双版本可保留本机并重试',async(
     await page.getByRole('textbox',{name:'内容',exact:true}).fill('API 离线时保存的本机版本，刷新后仍应存在。')
     await page.getByRole('button',{name:'保存记录'}).click()
     await page.getByRole('button',{name:'关闭弹窗'}).click()
-    await page.getByRole('button',{name:/08 系统/}).click()
+    await page.getByRole('button',{name:'系统',exact:true}).click()
     await page.getByRole('button',{name:'空间与功能'}).click()
     await expect(page.getByText(/离线队列 1 项/)).toBeVisible()
     const inspector=page.getByTestId('sync-queue-inspector')
@@ -105,13 +105,13 @@ test('两个标签页共享队列且同一修改只提交一次',async({page,con
   await firstLab.getByLabel('邮箱').fill(email);await firstLab.getByLabel('你的称呼').fill('多页甲');await firstLab.getByLabel('密码').fill(password)
   await firstLab.getByRole('button',{name:'注册并登录'}).click();await firstLab.getByRole('button',{name:'使用开发邮件箱完成验证'}).click();await firstLab.getByRole('button',{name:'创建空间'}).click()
   await expect(firstLab.getByText(/离线队列 0 项/)).toBeVisible()
-  await page.getByRole('button',{name:/03 回忆/}).click()
+  await page.getByRole('button',{name:'回忆',exact:true}).click()
   const second=await context.newPage();await second.goto('/#memories')
 
   await page.getByRole('button',{name:/雨天，也有好天气/}).first().click();await page.getByRole('button',{name:'编辑记录'}).click();await page.getByLabel('标题').fill('双标签只提交一次的咖啡回忆');await page.getByRole('button',{name:'保存记录'}).click();await page.getByRole('button',{name:'关闭弹窗'}).click()
   await expect(second.getByRole('button',{name:/双标签只提交一次的咖啡回忆/})).toBeVisible()
 
-  await Promise.all([page.getByRole('button',{name:/08 系统/}).click(),second.getByRole('button',{name:/08 系统/}).click()])
+  await Promise.all([page.getByRole('button',{name:'系统',exact:true}).click(),second.getByRole('button',{name:'系统',exact:true}).click()])
   await Promise.all([page.getByRole('button',{name:'空间与功能'}).click(),second.getByRole('button',{name:'空间与功能'}).click()])
   const [labA,labB]=[page.getByTestId('sync-lab'),second.getByTestId('sync-lab')]
   await Promise.all([labA.getByRole('button',{name:'立即同步'}).click(),labB.getByRole('button',{name:'立即同步'}).click()])

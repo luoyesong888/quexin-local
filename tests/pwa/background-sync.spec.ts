@@ -25,7 +25,7 @@ test('PWA 页面关闭后由 Service Worker 提交离线队列',async({page,cont
   if(!current.ok||!current.data||typeof current.data!=='object')throw new Error('没有测试空间')
   const spaceId=(current.data as {space:{id:string}}).space.id
 
-  await page.getByRole('button',{name:/03 回忆/}).click()
+  await page.getByRole('button',{name:'回忆',exact:true}).click()
   await context.setOffline(true)
   await page.getByRole('button',{name:/雨天，也有好天气/}).first().click()
   await page.getByRole('button',{name:'编辑记录'}).click()

@@ -16,7 +16,7 @@
     {"id":"wechat-chat-import","name":"微信聊天提取","enabled":false,"requiredCapability":"verified-workbuddy-chat-extractor","reason":"尚未检测到经过来源、权限和失败回退验收的 WorkBuddy 聊天提取适配器。"}
   ],
   "productTools": [
-    {"id":"open-page","name":"打开产品页面","risk":"L0","description":"打开今日、导入、回忆、计划、关怀、鹊巢、创作或设置页面；高风险操作仍在页面内确认。"},
+    {"id":"open-page","name":"打开产品页面","risk":"L0","description":"打开今日、回忆、计划、关怀、鹊巢、创作、设置或青鸟内部资料核对页（import，兼容旧导入任务）；高风险操作仍在页面内确认。"},
     {"id":"pet-touch","name":"摸摸小鹊","risk":"L1","description":"执行一次可逆的宠物互动。"},
     {"id":"pet-feed","name":"给小鹊喂食","risk":"L1","description":"执行一次喂食互动。"},
     {"id":"pet-rest","name":"让小鹊休息","risk":"L1","description":"把宠物姿态切换为休息。"},

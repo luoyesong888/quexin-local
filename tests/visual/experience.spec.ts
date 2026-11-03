@@ -133,7 +133,7 @@ test('桌面弹窗键盘退出并返回触发按钮，助手平板导航退出�
   await expect(page.getByRole('dialog')).toBeVisible();await page.keyboard.press('Escape');await expect(page.getByRole('dialog')).toHaveCount(0);await expect(guide).toBeFocused()
   await page.setViewportSize({width:768,height:1024})
   const assistant=page.getByRole('complementary',{name:'青鸟助手'});if(!await assistant.isVisible())await page.getByRole('button',{name:'展开青鸟助手'}).click()
-  await expect(assistant.getByLabel('给青鸟输入指令')).toBeVisible();await assistant.getByRole('button',{name:'关闭青鸟助手'}).click();await expect(assistant).not.toBeVisible();await page.getByRole('navigation',{name:'主导航'}).getByRole('button',{name:/导入/}).click();await expect(page).toHaveURL(/#import$/);await expect(page.getByLabel('想整理的内容',{exact:true})).toBeVisible()
+  await expect(assistant.getByLabel('给青鸟输入指令')).toBeVisible();await assistant.getByRole('button',{name:'关闭青鸟助手'}).click();await expect(assistant).not.toBeVisible();await page.getByRole('button',{name:'展开青鸟助手'}).click();await assistant.getByRole('button',{name:'添加图片、文件或录音'}).click();await assistant.getByRole('button',{name:'粘贴文字',exact:true}).click();await expect(page).toHaveURL(/#import$/);await expect(page.getByLabel('想整理的内容',{exact:true})).toBeVisible()
 })
 
 test('空空间和无效备份提供可恢复的提示',async({page})=>{

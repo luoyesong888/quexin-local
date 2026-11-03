@@ -9,8 +9,8 @@ async function account(context:BrowserContext,name:string){
   expect((await context.request.post(`${api}/auth/email/verify`,{data:{token:(await mail.json()).data.token}})).status()).toBe(200)
   return{email,userId:session.userId}
 }
-async function settings(page:Page){await page.getByRole('button',{name:/08 系统/}).click();await page.getByRole('button',{name:'空间与功能'}).click()}
-async function nest(page:Page){await page.getByRole('button',{name:/06 鹊巢/}).click()}
+async function settings(page:Page){await page.getByRole('button',{name:'系统',exact:true}).click();await page.getByRole('button',{name:'空间与功能'}).click()}
+async function nest(page:Page){await page.getByRole('button',{name:'鹊巢',exact:true}).click()}
 test('两个独立账号共享资料与宠物，主题私密独立，离线互动刷新后只执行一次',async({browser})=>{
   const a=await browser.newContext(),b=await browser.newContext()
   try{
@@ -33,8 +33,8 @@ test('两个独立账号共享资料与宠物，主题私密独立，离线互�
     await settings(pb);const profileB=pb.getByRole('region',{name:'空间资料',exact:true});await expect(profileB.getByLabel('你的称呼',{exact:true})).toHaveValue('共同乙')
     await profileB.getByLabel('你的称呼',{exact:true}).fill('小满');await profileB.getByLabel('对方的称呼').fill('阿澄');await profileB.getByLabel('故事开始的日期').fill('2024-06-21');await profileB.getByRole('button',{name:'保存资料'}).click()
     await settings(pa);const profileA=pa.getByRole('region',{name:'空间资料',exact:true});await expect(profileA.getByLabel('你的称呼',{exact:true})).toHaveValue('阿澄');await expect(profileA.getByLabel('对方的称呼')).toHaveValue('小满');await expect(profileA.getByLabel('故事开始的日期')).toHaveValue('2024-06-21')
-    await pa.getByRole('button',{name:/05 关怀/}).click();await pa.getByRole('textbox').first().fill('仅共同甲可见的私人草稿');await pa.getByRole('button',{name:'保存私人草稿',exact:true}).click()
-    await pb.getByRole('button',{name:/05 关怀/}).click();await expect(pb.getByText('仅共同甲可见的私人草稿',{exact:true})).toHaveCount(0)
+    await pa.getByRole('button',{name:'关怀',exact:true}).click();await pa.getByRole('textbox').first().fill('仅共同甲可见的私人草稿');await pa.getByRole('button',{name:'保存私人草稿',exact:true}).click()
+    await pb.getByRole('button',{name:'关怀',exact:true}).click();await expect(pb.getByText('仅共同甲可见的私人草稿',{exact:true})).toHaveCount(0)
     await nest(pb);await pb.route('**/formal/v1/**',route=>route.abort())
     await pb.getByRole('button',{name:'喂点心',exact:true}).click();await expect(pb.getByText(/共同空间：1 项操作等待同步/)).toBeVisible()
     await pb.reload();await expect(pb.getByText(/共同空间：1 项操作等待同步/)).toBeVisible()
@@ -55,9 +55,9 @@ test('退出后另一账号看不到私人资料，重新登录原账号可恢�
     const observer=await context.newPage();await observer.goto(`${base}/#care`);await expect(observer.getByRole('textbox').first()).toHaveValue('账号甲独有的私密草稿')
     await settings(page);await page.getByTestId('sync-lab').getByRole('button',{name:'退出',exact:true}).click()
     await page.goto(`${base}/#account/login`);await page.getByLabel('注册邮箱').fill(second.email);await page.getByLabel('密码',{exact:true}).fill(password);await page.getByRole('button',{name:'登录',exact:true}).click();await expect(page.getByRole('heading',{name:'登录成功'})).toBeVisible();await page.getByRole('link',{name:'返回空间'}).click()
-    await page.getByRole('button',{name:/05 关怀/}).click();await expect(page.getByRole('textbox').first()).toHaveValue('');await expect(page.getByText('账号甲独有的私密草稿',{exact:true})).toHaveCount(0)
+    await page.getByRole('button',{name:'关怀',exact:true}).click();await expect(page.getByRole('textbox').first()).toHaveValue('');await expect(page.getByText('账号甲独有的私密草稿',{exact:true})).toHaveCount(0)
     await expect(observer.getByRole('textbox').first()).toHaveValue('')
-    await page.goto(`${base}/#account/login`);await page.getByLabel('注册邮箱').fill(first.email);await page.getByLabel('密码',{exact:true}).fill(password);await page.getByRole('button',{name:'登录',exact:true}).click();await expect(page.getByRole('heading',{name:'登录成功'})).toBeVisible();await page.getByRole('link',{name:'返回空间'}).click();await page.getByRole('button',{name:/05 关怀/}).click()
+    await page.goto(`${base}/#account/login`);await page.getByLabel('注册邮箱').fill(first.email);await page.getByLabel('密码',{exact:true}).fill(password);await page.getByRole('button',{name:'登录',exact:true}).click();await expect(page.getByRole('heading',{name:'登录成功'})).toBeVisible();await page.getByRole('link',{name:'返回空间'}).click();await page.getByRole('button',{name:'关怀',exact:true}).click()
     await expect(page.getByRole('textbox').first()).toHaveValue('账号甲独有的私密草稿')
     await expect(observer.getByRole('textbox').first()).toHaveValue('账号甲独有的私密草稿')
   }finally{await context.close();await other.close()}

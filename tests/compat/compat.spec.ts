@@ -1,6 +1,6 @@
 import {test,expect,type Page} from '@playwright/test'
 
-const routes={today:'今日',import:'导入',memories:'回忆',planner:'计划',care:'关怀',nest:'鹊巢',create:'创作',settings:'系统'} as const
+const routes={today:'今日',import:'资料核对',memories:'回忆',planner:'计划',care:'关怀',nest:'鹊巢',create:'创作',settings:'系统'} as const
 async function demo(page:Page){await page.goto('/');await page.getByRole('button',{name:'先用虚构资料体验完整功能'}).click();await expect(page.locator('.app-shell')).toBeVisible()}
 async function noHorizontalCrop(page:Page){const widths=await page.evaluate(()=>({document:[document.documentElement.scrollWidth,document.documentElement.clientWidth],main:[document.querySelector('main')?.scrollWidth??0,document.querySelector('main')?.clientWidth??0]}));expect(widths.document[0]).toBeLessThanOrEqual(widths.document[1]+1);expect(widths.main[0]).toBeLessThanOrEqual(widths.main[1]+1)}
 

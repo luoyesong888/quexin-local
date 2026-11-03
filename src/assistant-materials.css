@@ -1,0 +1,6 @@
+.assistant-material-menu{padding:12px;margin-bottom:10px;border:1px solid var(--line);border-radius:8px;display:flex;flex-direction:column;gap:8px;background:var(--surface);max-height:36dvh;overflow:auto;font-size:12px}
+.assistant-material-menu header{display:flex;align-items:center;justify-content:space-between;gap:12px}.assistant-material-menu .btn{min-height:36px;height:auto;white-space:normal;justify-content:flex-start;font-size:11px}
+.assistant-material-menu .text-link{font-size:11px;text-align:left}.assistant-material-menu small{color:var(--muted);font-size:10px;line-height:1.6}
+.assistant-attachment-options{display:flex;flex-direction:column;gap:7px;padding:8px;margin-bottom:8px;background:var(--soft);border-radius:6px;font-size:11px;max-height:24dvh;overflow:auto}
+.assistant-attachment-options label{display:flex;align-items:flex-start;gap:8px;line-height:1.6}.assistant-attachment-options input{flex:none;margin-top:3px}.assistant-attachment-options .text-link{font-size:11px;text-align:left}.assistant-attachment-options small{color:var(--muted)}
+.home-source-actions{padding:16px;background:var(--soft);border:1px solid var(--line);border-radius:8px}.home-source-actions p{color:var(--muted);line-height:1.8;margin:0 0 12px}.home-source-actions .btn+.btn{margin-top:8px}

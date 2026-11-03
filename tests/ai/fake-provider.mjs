@@ -29,7 +29,8 @@ createServer(async(req,res)=>{
   const sourceIds=input.sources[0]?[input.sources[0].id]:[],blank={title:'',body:'',date:'',time:'',recordKind:'回忆',planKind:'计划',journalType:'日常',recurrence:'none',recurrenceUntil:'',reminderMinutes:0,careNeed:'想被听见',description:'',subject:'',recipient:'',productTool:'open-page',toolTarget:'',toolValue:''}
   if(input.mode==='command'){
    const base={summary:'已把直接指令整理成可审批的本地动作。',selectedSkills:['command-inbox'],steps:[{skillId:'command-inbox',title:'理解直接指令',reason:'用户在零资料状态下明确输入了管理指令'}],proposals:[],followUpQuestion:'',uncertainty:'只依据用户本次输入，不补充没有说明的事实。'}
-   if(text.includes('打开计划'))result={...base,proposals:[{kind:'product_action',title:'打开计划页面',riskLevel:'L0',sourceIds:[],fields:{...blank,productTool:'open-page',toolTarget:'planner',description:'打开鹊信的计划与日历页面'}}]}
+   if(text.includes('打开导入'))result={...base,proposals:[{kind:'product_action',title:'打开产品页面',riskLevel:'L0',sourceIds:[],fields:{...blank,productTool:'open-page',toolTarget:'import',description:'兼容历史目标，打开内部资料核对页面'}}]}
+   else if(text.includes('打开计划'))result={...base,proposals:[{kind:'product_action',title:'打开计划页面',riskLevel:'L0',sourceIds:[],fields:{...blank,productTool:'open-page',toolTarget:'planner',description:'打开鹊信的计划与日历页面'}}]}
    else if(text.includes('星河来信'))result={...base,proposals:[{kind:'product_action',title:'切换星河来信主题',riskLevel:'L1',sourceIds:[],fields:{...blank,productTool:'change-theme',toolValue:'cosmos',description:'把个人界面切换为星河来信主题'}}]}
    else if(text.includes('喂')&&text.includes('小鹊'))result={...base,proposals:[{kind:'product_action',title:'给小鹊喂食',riskLevel:'L1',sourceIds:[],fields:{...blank,productTool:'pet-feed',description:'执行一次鹊巢喂食互动'}}]}
    else if(text.includes('导出备份'))result={...base,proposals:[{kind:'product_action',title:'导出浏览器备份',riskLevel:'L1',sourceIds:[],fields:{...blank,productTool:'export-backup',description:'下载当前浏览器资料的 JSON 备份'}}]}

@@ -25,6 +25,10 @@ export interface DemoStore {
 }
 export interface PageProps {
   accountId?:string;
+  openAssistant?:(request?:{command?:string;attachments?:boolean})=>void;
+  assistantRequest?:{id:string;command?:string;attachments?:boolean};
+  consumeAssistantRequest?:(id:string)=>void;
+  openReview?:(file?:File)=>void;
   petAction?:(input:import('./companion-sync').PetActionInput)=>void;
   petGrowthSources?:Array<{sourceId:string;title:string;contribution:number;addedAt:string}>;
   store:DemoStore;

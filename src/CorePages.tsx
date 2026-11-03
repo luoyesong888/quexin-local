@@ -116,10 +116,10 @@ export function MemoriesPage({ store, update, notify, intent }: PageProps) {
   </div>
 }
 
-export function ImportPage({ store, setStore, update, notify, go, intent }: PageProps) {
+export function ImportPage({ store, setStore, update, notify, go, intent,openAssistant,incomingFile,onFileConsumed }: PageProps&{incomingFile?:File;onFileConsumed?:()=>void}) {
   const restored=useRef(store.importDraft).current
   const [showRestored,setShowRestored]=useState(Boolean(restored))
-  const [step, setStep] = useState<1|2|3|4>(restored?.step??1)
+  const [step, setStep] = useState<1|2|3|4>(intent==='review'?3:restored?.step??1)
   const [tab, setTab] = useState<'text' | 'file' | 'wechat'>(() => restored?.tab??(intent === 'file' || intent === 'wechat' ? intent : 'text'))
   const [text, setText] = useState(restored?.text??'')
   const [baseDate, setBaseDate] = useState(restored?.baseDate??today())
@@ -139,6 +139,14 @@ export function ImportPage({ store, setStore, update, notify, go, intent }: Page
   const modelController=useRef<AbortController|null>(null)
   const [selectedFile,setSelectedFile]=useState<File|null>(null),[audioUrl,setAudioUrl]=useState(''),[recognitionBusy,setRecognitionBusy]=useState(false)
   const recognitionController=useRef<AbortController|null>(null)
+  const receivedFile=useRef<File|null>(null)
+  const [replacementFile,setReplacementFile]=useState<File|null>(null)
+  useEffect(()=>{
+    if(!incomingFile||receivedFile.current===incomingFile)return
+    receivedFile.current=incomingFile
+    if(restored?.text||restored?.fileName){setReplacementFile(incomingFile);return}
+    setStep(1);setTab('file');void importFile(incomingFile).finally(()=>onFileConsumed?.())
+  },[incomingFile])
   useEffect(()=>()=>{modelController.current?.abort();recognitionController.current?.abort();if(audioUrl)URL.revokeObjectURL(audioUrl)},[audioUrl])
   useEffect(()=>{
     if(step>2)return
@@ -251,6 +259,8 @@ export function ImportPage({ store, setStore, update, notify, go, intent }: Page
     else notify('检查完成：本批次没有发现重复内容。')
   }
   return <div className="core-page">
+    <div className="core-info-strip"><Icon name="bird" size={18}/><span>青鸟 · 资料核对。这里保留原文、草稿和所有待确认候选。</span><button className="text-link" onClick={()=>openAssistant?.({attachments:true})}>返回青鸟添加资料</button>{step!==3&&store.records.some(item=>item.status==='pending')&&<button className="text-link" onClick={()=>{setBatchIds(store.records.filter(item=>item.status==='pending').map(item=>item.id));setStep(3)}}>查看全部待确认候选</button>}</div>
+    {replacementFile&&<section className="panel" aria-label="替换未完成草稿"><h3>已有一份未完成的草稿</h3><p>继续使用“{replacementFile.name}”会替换当前整理内容，已经保存的候选不受影响。</p><button className="btn primary" onClick={()=>{const file=replacementFile;setReplacementFile(null);setShowRestored(false);setCheckedLines([]);setStep(1);setTab('file');void importFile(file).finally(()=>onFileConsumed?.())}}>使用新附件</button><button className="btn secondary" onClick={()=>{setReplacementFile(null);onFileConsumed?.()}}>保留原草稿</button></section>}
     <div className="core-import-stepper" aria-label={`导入流程，第 ${step} 步`}>{['选择内容', '确认人物与范围', '核对候选', '完成保存'].map((label, index) => <div key={label} className={step === index + 1 ? 'active' : step > index + 1 ? 'done' : ''}><span>{step > index + 1 ? '✓' : `0${index + 1}`}</span><strong>{label}</strong></div>)}</div>
     {importError&&<p className="core-info-strip" role="alert">{importError}</p>}
     {showRestored&&store.importDraft&&<div className="core-info-strip" role="status"><Icon name="refresh" size={18}/><div><strong>已恢复未完成的导入</strong><p>保存于 {new Date(store.importDraft.savedAt).toLocaleString('zh-CN')}{store.importDraft.binaryRequired?'；图片或音频文件不会写入草稿，请重新选择文件后再识别。':''}</p><button className="core-text-button" onClick={()=>{setShowRestored(false);clearDraft();setStep(1);setText('');setFileName('');setSourceType('text');setCheckedLines([])}}>放弃这份草稿</button></div></div>}
