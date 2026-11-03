@@ -38,7 +38,11 @@
     "test-results",
     "reports",
     "tests",
-    ".workbuddy-options.local.json"
+    ".workbuddy-options.local.json",
+    "public/zhuleyi",
+    "workbuddy-inbox",
+    "workbuddy-exchange",
+    "quexin-data"
   ],
   "excludedPrefixes": [
     "scripts/test-",
@@ -49,6 +53,8 @@
     "secrets.json",
     "config.json",
     "service.log",
-    "postgres.log"
+    "postgres.log",
+    "binding.json",
+    "operation.lock"
   ]
 }

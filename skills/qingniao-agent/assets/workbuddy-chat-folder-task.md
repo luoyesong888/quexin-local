@@ -10,12 +10,12 @@
 6. 原始导出完成后，运行以下兼容转换命令：
 
 ```bash
-cd "{{QUEXIN_PROJECT}}"
+cd {{QUEXIN_PROJECT_SHELL}}
 node scripts/workbuddy-chat-bridge.mjs convert \
-  --source "{{SOURCE_DIR}}" \
-  --inbox "{{INBOX_ROOT}}" \
-  --space-id "{{SPACE_ID}}" \
-  --conversation-id "{{CONVERSATION_ID}}" \
+  --source {{SOURCE_DIR_SHELL}} \
+  --inbox {{INBOX_ROOT_SHELL}} \
+  --space-id {{SPACE_ID_SHELL}} \
+  --conversation-id {{CONVERSATION_ID_SHELL}} \
   --extractor-version "workbuddy-folder-handoff-1"
 ```
 

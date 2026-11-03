@@ -8,6 +8,9 @@ import { encryptNotification } from './lib/notification-crypto.mjs'
 import {AssistantProvider,AssistantProviderError} from './lib/assistant-provider.mjs'
 import {readAssistantAdminConfig,requestLocalRestart,saveAssistantAdminConfig} from './lib/optional-config.mjs'
 import {encryptCapsule,decryptCapsule} from './lib/capsule-crypto.mjs'
+import {startInboxMonitor} from './lib/workbuddy-inbox-monitor.mjs'
+import {dirname,resolve} from 'node:path'
+import {fileURLToPath} from 'node:url'
 import {
   clearSessionCookie, hashPassword, hashToken, newSessionToken, normalizeEmail,
   parseCookies, sessionCookie, validEmail, validPassword, verifyPassword,
@@ -414,4 +417,7 @@ const server = createServer((request, response) => { void route(request, respons
   return fail(response, 500, 'INTERNAL_ERROR', '服务暂时不可用', randomUUID())
 }) })
 server.listen(port, host, () => console.log(`鹊信正式 API（${memory ? '内存测试' : 'PostgreSQL'}）：http://${host}:${port}`))
-for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => server.close(() => { void store.close().finally(() => process.exit(0)) }))
+const projectRoot=resolve(dirname(fileURLToPath(import.meta.url)),'..')
+const stopInboxMonitor=!memory&&['127.0.0.1','::1'].includes(host)&&process.env.DISABLE_BACKGROUND_WORKERS!=='true'
+ ?startInboxMonitor({dataRoot:resolve(process.env.QUEXIN_LOCAL_DATA??resolve(projectRoot,'.local-data')),projectRoot}):()=>{}
+for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => {stopInboxMonitor();server.close(() => { void store.close().finally(() => process.exit(0)) })})

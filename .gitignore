@@ -33,4 +33,6 @@ video-production/exports/
 
 # 本机导入的私人聊天与编辑器临时文件
 public/zhuleyi/
+workbuddy-inbox/
+workbuddy-exchange/
 src/styles.css*

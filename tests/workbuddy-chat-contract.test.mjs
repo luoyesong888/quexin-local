@@ -33,7 +33,7 @@ test('F1 拒绝越界图片、缺失图片和无效 manifest',async()=>{
  const f=await fixture()
  try{
   const chatPath=join(f.source,'chat.json'),legacy=JSON.parse(await readFile(chatPath,'utf8'));legacy.chats[0].messages[1].text='[图片:../outside.jpg]';await writeFile(chatPath,JSON.stringify(legacy));await assert.rejects(()=>convertLegacyWorkBuddyExport({sourceDir:f.source,inboxRoot:f.inbox,spaceId:'space-demo',conversationId:'conversation-demo',dryRun:true}),/越界/)
-  legacy.chats[0].messages[1].text='[图片:images/missing.jpg]';await writeFile(chatPath,JSON.stringify(legacy));await assert.rejects(()=>convertLegacyWorkBuddyExport({sourceDir:f.source,inboxRoot:f.inbox,spaceId:'space-demo',conversationId:'conversation-demo',dryRun:true}),/只允许普通文件|ENOENT/)
+  legacy.chats[0].messages[1].text='[图片:images/missing.jpg]';await writeFile(chatPath,JSON.stringify(legacy));await assert.rejects(()=>convertLegacyWorkBuddyExport({sourceDir:f.source,inboxRoot:f.inbox,spaceId:'space-demo',conversationId:'conversation-demo',dryRun:true}),error=>error.code==='MISSING_FILE')
   assert.equal(validateWorkBuddyChatManifest({format:'future-version'}).ok,false);assert.equal(validateWorkBuddyChatManifest({...{format:WORKBUDDY_CHAT_FORMAT,jobId:'job',batchId:'batch',spaceId:'space',conversationId:'conversation',sourceApp:'wechat',extractorVersion:'test',createdAt:'2026-11-03T00:00:00.000Z',timezone:'Asia/Shanghai',participants:[{id:'self',label:'我'}],range:{from:'2026-01-01',to:'2026-01-02'},totals:{messages:1,media:0},chunks:[{file:'../escape.json',count:1,sha256:'a'.repeat(64)}],media:[],status:'ready'}}).ok,false)
  }finally{await rm(f.root,{recursive:true,force:true})}
 })

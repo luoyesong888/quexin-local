@@ -18,13 +18,13 @@
     "participants": {"type": "array", "minItems": 1, "maxItems": 20, "items": {"type": "object", "additionalProperties": false, "required": ["id", "label"], "properties": {"id": {"$ref": "#/$defs/id"}, "label": {"type": "string", "minLength": 1, "maxLength": 80}}}},
     "range": {"type": "object", "additionalProperties": false, "required": ["from", "to"], "properties": {"from": {"type": "string", "format": "date"}, "to": {"type": "string", "format": "date"}}},
     "totals": {"type": "object", "additionalProperties": false, "required": ["messages", "media"], "properties": {"messages": {"type": "integer", "minimum": 0, "maximum": 200000}, "media": {"type": "integer", "minimum": 0, "maximum": 10000}}},
-    "chunks": {"type": "array", "minItems": 1, "items": {"type": "object", "additionalProperties": false, "required": ["file", "count", "sha256"], "properties": {"file": {"$ref": "#/$defs/path"}, "count": {"type": "integer", "minimum": 0, "maximum": 1000}, "sha256": {"$ref": "#/$defs/sha256"}}}},
-    "media": {"type": "array", "maxItems": 10000, "items": {"type": "object", "additionalProperties": false, "required": ["path", "mime", "size", "sha256"], "properties": {"path": {"$ref": "#/$defs/path"}, "mime": {"type": "string", "pattern": "^image/"}, "size": {"type": "integer", "minimum": 0, "maximum": 26214400}, "sha256": {"$ref": "#/$defs/sha256"}}}},
+    "chunks": {"type": "array", "minItems": 1, "maxItems": 200, "items": {"type": "object", "additionalProperties": false, "required": ["file", "count", "sha256"], "properties": {"file": {"type": "string", "pattern": "^messages-[0-9]{4}\\.json$"}, "count": {"type": "integer", "minimum": 0, "maximum": 1000}, "sha256": {"$ref": "#/$defs/sha256"}}}},
+    "media": {"type": "array", "maxItems": 10000, "items": {"type": "object", "additionalProperties": false, "required": ["path", "mime", "size", "sha256"], "properties": {"path": {"allOf": [{"$ref": "#/$defs/path"}, {"pattern": "^media/"}]}, "mime": {"enum": ["image/jpeg", "image/png", "image/webp", "image/gif"]}, "size": {"type": "integer", "minimum": 0, "maximum": 26214400}, "sha256": {"$ref": "#/$defs/sha256"}}}},
     "status": {"const": "ready"}
   },
   "$defs": {
     "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"},
-    "path": {"type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$"},
+    "path": {"type": "string", "minLength": 1, "maxLength": 240, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.?(?:/|$))(?!.*[\\\\:\\u0000-\\u001f\\u007f])(?!.*//)(?!.*\\/$).+$"},
     "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
   }
 }

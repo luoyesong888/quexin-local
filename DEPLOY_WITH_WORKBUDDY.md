@@ -1,5 +1,47 @@
 # 使用 WorkBuddy 部署鹊信本地版
 
+## WorkBuddy 文件夹交接（F2 开发阶段）
+
+当前已具备转换器、安全收件箱和后台清单发现能力；聊天归档/检索、青鸟范围确认界面将在 F3/F4 接入。`ready` 状态只表示文件校验通过，**不表示已生成回忆或完成共享**。
+
+WorkBuddy 和鹊信在同一电脑上交接文件。“交换箱”不等于双方可见的共享聊天库。原始聊天放在源码目录以外，鹊信只访问明确配置的目录。当前不会遥控 WorkBuddy，也不会扫描微信。操作命令由当前本机用户执行；未来网页绑定账号时必须使用服务端登录身份，不能信任浏览器提交的账号 ID。
+
+先用真实账号/空间 ID 配置交换箱（请替换示例路径）：
+
+```bash
+npm run workbuddy:inbox -- configure --inbox '/完整路径/鹊信交换箱' --owner-id '本机账号ID' --space-id '空间ID' --yes
+```
+
+ID 使用英文字母、数字、点、连字符或下划线，开头为字母或数字。默认本机状态保存到 `.local-data/workbuddy-inbox/`，支持 `QUEXIN_LOCAL_DATA` 或 `--data-root`。交换箱必须在项目目录外；已有目录须归当前用户所有且权限为 `0700`，文件为 `0600`。程序会拒绝宽权限目录，不会擅自修改现有目录权限。
+
+将已获授权的 WorkBuddy 导出转换成批次：
+
+```bash
+npm run workbuddy:chat -- convert --source '/完整路径/已授权导出' --inbox '/完整路径/鹊信交换箱' --space-id '空间ID' --conversation-id '稳定会话ID'
+```
+
+转换器先写 `staging`，文件完成后原子移入 `ready`。随后运行以下命令查看清单；只读取 manifest，不打开聊天分块和图片：
+
+```bash
+npm run workbuddy:inbox -- scan --owner-id '本机账号ID' --space-id '空间ID'
+npm run workbuddy:inbox -- status --owner-id '本机账号ID' --space-id '空间ID'
+```
+
+核对批次后，通过 `scan` 返回的 `batchId` 和 `digest` 批准本次本地正文/图片校验：
+
+```bash
+npm run workbuddy:inbox -- approve --owner-id '本机账号ID' --space-id '空间ID' --batch-id '批次ID' --digest '清单SHA256' --yes
+npm run workbuddy:inbox -- scan --owner-id '本机账号ID' --space-id '空间ID'
+```
+
+本机正式 API 启动后每 5 秒检查已配置的交换箱；未配置时不创建目录、不扫描磁盘，内存测试模式和非回环监听模式不启用。也可单独运行 `watch`；Ctrl+C 停止。更新代码后需重启本机服务才能启用新后台代码。Exchange 目录暂时不可用会在下一轮继续检查，不影响其他功能。
+
+异常批次按随机 ID 移入交换箱的 `quarantine`，原文件保留；修复文件、清单和权限后，可运行 `retry --owner-id ... --space-id ... --batch-id ... --yes` 返回待确认状态，并重新批准。软链接/特殊文件本身不会被跟随或移动，仅标记失败。
+
+授权绑定清单 SHA。清单变化撤销授权；文件属性变化触发重新校验。处理中断会在重启后重新校验，状态损坏会保留现场并停止。当前 F2 只会进入 `waiting → validating → ready/failed`；`processing/completed` 为 F3 归档保留。后续归档前必须再次校验 digest 和文件，不能仅凭旧的 ready 标记读取。
+
+停用可重复运行 `configure`，使用相同目录、账号、空间并加 `--disabled --yes`；下一次扫描停止读取。新目录应作为独立绑定规划，当前不允许覆盖原绑定路径。状态文件包含 ID、计数、清单摘要和错误码，不包含聊天正文、联系人称呼和密钥。聊天目录不会进入普通 Git/发布包；已有浏览器和服务端备份功能不包含此交换箱。
+
 适用范围：macOS、Node.js 22.12+、PostgreSQL 17、桌面浏览器。本流程只部署到当前电脑，不上传公网。
 
 ## WorkBuddy 必须遵守

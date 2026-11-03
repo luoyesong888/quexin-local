@@ -14,6 +14,7 @@ const action=process.argv[2]??'help',args=process.argv.slice(3)
 const {values}=parseArgs({args,strict:true,options:{source:{type:'string'},inbox:{type:'string'},'space-id':{type:'string'},'conversation-id':{type:'string'},'job-id':{type:'string'},'batch-id':{type:'string'},'extractor-version':{type:'string'},timezone:{type:'string'},'dry-run':{type:'boolean',default:false}}})
 const required=name=>{const value=String(values[name]??'').trim();if(!value)throw new Error(`缺少 --${name}`);return value}
 const options=()=>({sourceDir:required('source'),inboxRoot:required('inbox'),spaceId:required('space-id'),conversationId:required('conversation-id'),jobId:values['job-id'],batchId:values['batch-id'],extractorVersion:values['extractor-version'],timezone:values.timezone,dryRun:Boolean(values['dry-run'])})
+const shellQuote=value=>"'"+value.replaceAll("'","'\\''")+"'"
 
 async function main(){
  if(action==='help'||action==='--help'||action==='-h'){console.log(usage);return}
@@ -23,7 +24,8 @@ async function main(){
  }
  if(action==='task'){
   const input=options(),template=await readFile(resolve(project,'skills/qingniao-agent/assets/workbuddy-chat-folder-task.md'),'utf8'),replacements={SOURCE_DIR:resolve(input.sourceDir),INBOX_ROOT:resolve(input.inboxRoot),SPACE_ID:input.spaceId,CONVERSATION_ID:input.conversationId,QUEXIN_PROJECT:project}
-  console.log(Object.entries(replacements).reduce((text,[key,value])=>text.replaceAll(`{{${key}}}`,value),template));return
+  const quoted=Object.fromEntries(Object.entries(replacements).map(([key,value])=>[key+'_SHELL',shellQuote(value)]))
+  console.log(Object.entries({...replacements,...quoted}).reduce((text,[key,value])=>text.replaceAll(`{{${key}}}`,value),template));return
  }
  throw new Error(`不支持的动作：${action}\n${usage}`)
 }
