@@ -38,6 +38,7 @@ try{
  await check('workbuddy-lifecycle',process.execPath,['--test','tests/workbuddy-lifecycle.test.mjs'])
  await check('workbuddy-chat-contract',process.execPath,['--test','tests/workbuddy-chat-contract.test.mjs'])
  await check('workbuddy-inbox',process.execPath,['--test','tests/workbuddy-inbox.test.mjs'])
+ await check('workbuddy-chat-archive',process.execPath,['--test','tests/workbuddy-chat-archive.test.mjs','tests/workbuddy-archive-serving.test.mjs'])
  await check('companion-store',process.execPath,['--test','tests/companion-store.test.mjs'],configuration?{ACCOUNT_TEST_DATABASE_URL:configuration.adminUrl}:{})
  await check('capsule-store',process.execPath,['--test','tests/capsule-store.test.mjs'],configuration?{CAPSULE_TEST_DATABASE_URL:configuration.databaseUrl}:{})
  await check('lifecycle-store',process.execPath,['--test','tests/lifecycle-store.test.mjs'],configuration?{LIFECYCLE_TEST_DATABASE_URL:configuration.databaseUrl,LIFECYCLE_ADMIN_URL:configuration.adminUrl}:{})

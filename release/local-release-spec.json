@@ -41,6 +41,7 @@
     ".workbuddy-options.local.json",
     "public/zhuleyi",
     "workbuddy-inbox",
+    "workbuddy-archive",
     "workbuddy-exchange",
     "quexin-data"
   ],
@@ -55,6 +56,10 @@
     "service.log",
     "postgres.log",
     "binding.json",
-    "operation.lock"
+    "operation.lock",
+    "chat.sqlite",
+    "chat.sqlite-journal",
+    "chat.sqlite-wal",
+    "chat.sqlite-shm"
   ]
 }

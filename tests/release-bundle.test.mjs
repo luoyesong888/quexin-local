@@ -22,6 +22,8 @@ test('发布包按白名单生成、可校验，并拒绝覆盖、禁止文件�
     assert.equal(packaged.scripts['workbuddy:inbox'],'node scripts/workbuddy-inbox.mjs')
     for(const file of ['shared/workbuddy-chat-files.mjs','server/lib/workbuddy-inbox.mjs','server/lib/workbuddy-inbox-validator.mjs','server/lib/workbuddy-inbox-monitor.mjs'])assert.ok(manifest.files.some(item=>item.path===file))
     for(const excluded of ['public/zhuleyi/','workbuddy-inbox/','workbuddy-exchange/'])assert.equal(manifest.files.some(item=>item.path.startsWith(excluded)),false)
+    for(const file of ['server/lib/workbuddy-chat-archive.mjs','server/lib/workbuddy-chat-archive-worker.mjs','shared/workbuddy-chat-identity.mjs'])assert.ok(manifest.files.some(item=>item.path===file))
+    assert.equal(manifest.files.some(item=>item.path.includes('workbuddy-archive/')||item.path.endsWith('chat.sqlite')),false)
     await writeFile(join(packageRoot,'.env.local'),'SECRET_SHOULD_NEVER_SHIP=1\n');await assert.rejects(()=>exec(node,[verify,packageRoot],{cwd:process.cwd()}),error=>{assert.match(error.stderr,/禁止路径/);return true});await unlink(join(packageRoot,'.env.local'))
     await appendFile(join(packageRoot,'README.md'),'\n篡改');await assert.rejects(()=>exec(node,[verify,packageRoot],{cwd:process.cwd()}),error=>{assert.match(error.stderr,/摘要、大小或权限不匹配/);return true})
     await appendFile(archive,'tampered');await assert.rejects(()=>exec(node,[verify,archive],{cwd:process.cwd()}),error=>{assert.match(error.stderr,/SHA-256 不匹配/);return true});assert.match(await readFile(checksum,'utf8'),/^[a-f0-9]{64}\s+quexin-local-macos-v/)

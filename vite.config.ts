@@ -9,6 +9,9 @@ export default defineConfig({
     host: '127.0.0.1',
     port: Number(environment.WEB_PORT ?? 4188),
     strictPort: true,
+    fs: {
+      deny: ['.env', '.env.*', '*.{crt,pem}', '**/.git/**', '**/.local-data/**', '**/workbuddy-archive/**', '**/workbuddy-inbox/**', '**/workbuddy-exchange/**', '**/*.sqlite*'],
+    },
     proxy: {
       '/v1': { target: environment.MOCK_API_TARGET ?? 'http://127.0.0.1:4191', changeOrigin: false },
       '/formal': { target: environment.FORMAL_API_TARGET ?? 'http://127.0.0.1:4193', changeOrigin: false, rewrite: path => path.replace(/^\/formal/, '') },

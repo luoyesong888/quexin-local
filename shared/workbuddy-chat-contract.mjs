@@ -2,6 +2,7 @@ import {createHash,randomUUID} from 'node:crypto'
 import {chmod,lstat,mkdir,rename,rm,writeFile} from 'node:fs/promises'
 import {basename,dirname,isAbsolute,join,relative,resolve,sep} from 'node:path'
 import {fileURLToPath} from 'node:url'
+import {fallbackMessageId} from './workbuddy-chat-identity.mjs'
 import {absoluteChatPath,assertExternalInbox,checkedPath,containsPath,InboxError,privateDirectory,readChatFile,safeChatPath,parseChatJson} from './workbuddy-chat-files.mjs'
 
 export const WORKBUDDY_CHAT_FORMAT='quexin-workbuddy-chat-v1'
@@ -22,14 +23,15 @@ const safeRelativePath=value=>{
  return path
 }
 const within=(root,path)=>{const value=relative(root,path);return value===''||!value.startsWith('..'+sep)&&value!=='..'&&!isAbsolute(value)}
-const legacyTimestamp=(date,time)=>{
+const legacyTimestamp=(date,time,timezone)=>{
  const raw=cleanText(time)
- if(iso(raw))return new Date(raw).toISOString()
- if(/^\d{2}:\d{2}(?::\d{2})?$/.test(raw)&&/^\d{4}-\d{2}-\d{2}$/.test(date))return `${date}T${raw.length===5?raw+':00':raw}+08:00`
- if(/^\d{4}-\d{2}-\d{2}$/.test(date))return `${date}T12:00:00+08:00`
- throw new Error(`无法识别消息时间：${raw||date}`)
+ if(/^\d{4}-\d{2}-\d{2}T.+(?:Z|[+-]\d{2}:\d{2})$/.test(raw)&&iso(raw))return new Date(raw).toISOString()
+ const offset=timezone==='Asia/Shanghai'?'+08:00':['UTC','Etc/UTC'].includes(timezone)?'Z':null
+ if(!offset)throw new InboxError('INVALID_MESSAGE')
+ if(/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/.test(raw)&&/^\d{4}-\d{2}-\d{2}$/.test(date))return `${date}T${raw.length===5?raw+':00':raw}${offset}`
+ if(/^\d{4}-\d{2}-\d{2}[ T](?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/.test(raw))return raw.replace(' ','T')+(raw.length===16?':00':'')+offset
+ throw new InboxError('INVALID_MESSAGE')
 }
-const messageHash=input=>sha256([input.conversationId,input.senderId,input.timestamp,String(input.sequence),input.text,...input.mediaRefs.map(item=>item.sha256)].join('\u001f'))
 const writePrivate=async(path,content)=>{await privateDirectory(dirname(path));await writeFile(path,content,{mode:0o600,flag:'wx'})}
 const mimeFor=name=>({'.jpg':'image/jpeg','.jpeg':'image/jpeg','.png':'image/png','.gif':'image/gif','.webp':'image/webp'}[name.slice(name.lastIndexOf('.')).toLowerCase()]??'application/octet-stream')
 
@@ -57,7 +59,7 @@ export function normalizeLegacyChat(value,{conversationId='wechat-conversation',
  const self=cleanText(selfLabel??value.self),partner=cleanText(partnerLabel??value.partner)
  if(!self||!partner)throw new Error('缺少双方人物标识')
  if(value.chats.length>3660)throw new Error('聊天日期分组超过上限')
- const messages=[];let sequence=0
+ const messages=[],occurrences=new Map();let sequence=0
  for(const day of value.chats){
   if(!object(day)||!/^\d{4}-\d{2}-\d{2}$/.test(day.date)||!Array.isArray(day.messages))throw new Error('旧版日期分组无效')
   for(const item of day.messages){
@@ -65,8 +67,9 @@ export function normalizeLegacyChat(value,{conversationId='wechat-conversation',
    sequence+=1;if(sequence>WORKBUDDY_CHAT_LIMITS.messages)throw new Error('消息数量超过上限')
    const senderLabel=cleanText(item.sender),senderId=senderLabel==='我' || senderLabel===self?'self':senderLabel==='对方' || senderLabel===partner?'partner':'participant-'+sha256(senderLabel).slice(0,12),text=String(item.text??''),mediaRefs=[]
    for(const match of text.matchAll(imageMarker)){const legacyPath=safeRelativePath(match[1]),media=mediaByLegacyPath.get(legacyPath);if(!media)throw new Error(`缺少聊天图片：${legacyPath}`);mediaRefs.push({path:media.path,mime:media.mime,size:media.size,sha256:media.sha256})}
-   const timestamp=legacyTimestamp(day.date,item.time),normalized={conversationId:safeId(conversationId,'conversationId'),messageId:'',senderId,senderLabel,timestamp,timezone,sequence,text,mediaRefs}
-   normalized.messageId=messageHash(normalized)
+   const timestamp=legacyTimestamp(day.date,item.time,timezone),normalized={conversationId:safeId(conversationId,'conversationId'),messageId:'',senderId,senderLabel,timestamp,timezone,sequence,text,mediaRefs}
+   const sourceId=item.messageId??item.id
+   normalized.messageId=sourceId===undefined?fallbackMessageId(normalized,occurrences):safeId('source-'+String(sourceId),'messageId')
    messages.push(normalized)
   }
  }

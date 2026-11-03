@@ -81,6 +81,7 @@
     "test:workbuddy-lifecycle": "node --test tests/workbuddy-lifecycle.test.mjs",
     "test:workbuddy-chat-contract": "node --test tests/workbuddy-chat-contract.test.mjs",
     "test:workbuddy-inbox": "node --test tests/workbuddy-inbox.test.mjs",
+    "test:workbuddy-chat-archive": "node --test tests/workbuddy-chat-archive.test.mjs tests/workbuddy-archive-serving.test.mjs",
     "test:final-local-release": "node scripts/test-final-local-release.mjs",
     "test:release-bundle": "node --test tests/release-bundle.test.mjs",
     "preview": "vite preview --host 127.0.0.1",

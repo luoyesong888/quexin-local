@@ -3,6 +3,7 @@ import {lstat,opendir,rename,unlink,open} from 'node:fs/promises'
 import {join} from 'node:path'
 import {absoluteChatPath,assertExternalInbox,atomicPrivateJson,checkedPath,chatId,InboxError,inboxError,parseChatJson,privateDirectory,readChatFile} from '../../shared/workbuddy-chat-files.mjs'
 import {batchStamp,inspectBatch,validateBatch,INBOX_LIMITS} from './workbuddy-inbox-validator.mjs'
+import {archiveOperation} from './workbuddy-chat-archive.mjs'
 
 const STATE_FORMAT='quexin-workbuddy-inbox-state-v1'
 const CONFIG_FORMAT='quexin-workbuddy-inbox-config-v1'
@@ -25,7 +26,7 @@ export async function configureInbox({dataRoot,projectRoot,inboxRoot,ownerId,spa
 
 export class WorkBuddyInbox {
  constructor({dataRoot,projectRoot,ownerId,spaceId,limits=INBOX_LIMITS}){
-  this.ownerId=ownerId;this.spaceId=spaceId;this.projectRoot=projectRoot;this.limits=limits
+  this.ownerId=ownerId;this.spaceId=spaceId;this.projectRoot=projectRoot;this.dataRoot=dataRoot;this.limits=limits
   this.control=join(absoluteChatPath(dataRoot),'workbuddy-inbox',bindingId(ownerId,spaceId))
   this.config=null;this.health={status:'not_configured'}
  }
@@ -113,7 +114,7 @@ export class WorkBuddyInbox {
    return{ok:true,health:this.health,batches:Object.values(state.entries)}
   })}catch(error){this.health={status:error.code==='NOT_CONFIGURED'?'not_configured':'unavailable',error:inboxError(error)};return{ok:false,health:this.health,batches:[]}}
  }
- async approve(batchId,digest){
+ async approve(batchId,digest,{archive=false}={}){
   if(!chatId(batchId)||!/^([a-f0-9]{64})$/.test(digest??''))throw new InboxError('APPROVAL_REQUIRED')
   return this.exclusive(async()=>{
    if(!this.config.enabled)throw new InboxError('APPROVAL_REQUIRED')
@@ -121,7 +122,7 @@ export class WorkBuddyInbox {
    if(!item||item.status==='failed')throw new InboxError('APPROVAL_REQUIRED')
    const inspected=await inspectBatch(join(this.spaceRoot,'ready',batchId),{spaceId:this.spaceId,batchId,limits:this.limits})
    if(inspected.digest!==digest||item.digest!==digest)throw new InboxError('APPROVAL_REQUIRED')
-   item.approval={digest,at:now(),ownerId:this.ownerId};this.transition(item,'waiting');await this.save(state)
+   item.approval={digest,at:now(),ownerId:this.ownerId,archive:Boolean(archive)};this.transition(item,'waiting');await this.save(state)
    return{batchId,status:'waiting',approved:true}
   })
  }
@@ -137,6 +138,42 @@ export class WorkBuddyInbox {
    delete state.entries[batchId];await this.save(state);return{batchId,status:'waiting'}
   })
  }
+ async archive(batchId,{signal,onProgress}={}){
+  if(!chatId(batchId))throw new InboxError('UNSAFE_PATH')
+  return this.exclusive(async()=>{
+   if(!this.config.enabled)throw new InboxError('APPROVAL_REQUIRED')
+   const state=await this.state(),item=Object.hasOwn(state.entries,batchId)?state.entries[batchId]:null
+   if(!item||!item.approval?.archive||item.approval.ownerId!==this.ownerId||item.approval.digest!==item.digest||!['ready','processing','completed'].includes(item.status))throw new InboxError('ARCHIVE_APPROVAL_REQUIRED')
+   let committed=false
+   try{
+    this.transition(item,'processing');await this.save(state)
+    const result=await archiveOperation(this,'import',{batchId,digest:item.digest,root:join(this.spaceRoot,'ready',batchId)},{signal,onProgress});committed=true
+    item.archive=result;this.transition(item,'completed');await this.save(state)
+    // SQLite receipt is authoritative. This filesystem receipt is reconstructible.
+    await checkedPath(join(this.spaceRoot,'processed'),{privateMode:true})
+    await atomicPrivateJson(join(this.spaceRoot,'processed'),batchId+'.json',{format:'quexin-workbuddy-processed-v1',...result})
+    return result
+   }catch(error){
+    if(committed){item.receiptError=inboxError(error);await this.save(state);return item.archive}
+    if(error.code==='CANCELLED'){item.approval.archive=false;this.transition(item,'ready',inboxError(error));await this.save(state)}
+    else if(['ARCHIVE_TIMEOUT','ARCHIVE_UNAVAILABLE','BUSY'].includes(error.code)){this.transition(item,'processing',inboxError(error));await this.save(state)}
+    else await this.quarantine(item,state,error)
+    throw error
+   }
+  })
+ }
+ async synchronize({signal}={}){
+  // Reconcile a committed transaction before touching source files after a crash.
+  try{await this.load();if(this.config.enabled)for(const item of Object.values((await this.state()).entries))if(item.status==='processing'&&item.approval?.archive)await this.archive(item.batchId,{signal})}catch(error){return{ok:false,health:{status:'unavailable',error:inboxError(error)},batches:[]}}
+  const result=await this.scan({signal});if(!result.ok)return result
+  for(const item of result.batches)if(item.status==='ready'&&item.approval?.archive){try{await this.archive(item.batchId,{signal})}catch(error){return{...await this.status(),ok:false,health:{status:'attention',error:inboxError(error)}}}}
+  return this.status()
+ }
+ async queryArchive(action,payload={},options={}){
+  await this.load();if(!this.config.enabled)throw new InboxError('APPROVAL_REQUIRED')
+  if(!['search','message','stats'].includes(action))throw new InboxError('INVALID_QUERY')
+  return archiveOperation(this,action,payload,options)
+ }
  async status(){
   try{await this.load();if(!this.config.enabled)return{ok:true,health:{status:'disabled'},batches:[]};await this.checkFolders();return{ok:true,health:{status:'available'},batches:Object.values((await this.state()).entries)}}catch(error){return{ok:false,health:{status:error.code==='NOT_CONFIGURED'?'not_configured':'unavailable',error:inboxError(error)},batches:[]}}
  }
@@ -145,7 +182,7 @@ export class WorkBuddyInbox {
 export function watchInbox(inbox,{intervalMs=5000,onResult=()=>{},signal}={}){
  if(!Number.isInteger(intervalMs)||intervalMs<20||intervalMs>60_000)throw new InboxError('UNSAFE_PATH')
  let timer,stopped=false;const controller=new AbortController()
- const run=async()=>{if(stopped)return;try{onResult(await inbox.scan({signal:controller.signal}))}catch{ /* a reporting failure cannot terminate the product */ }finally{if(!stopped)timer=setTimeout(run,intervalMs)}}
+ const run=async()=>{if(stopped)return;try{onResult(await inbox.synchronize({signal:controller.signal}))}catch{ /* a reporting failure cannot terminate the product */ }finally{if(!stopped)timer=setTimeout(run,intervalMs)}}
  const stop=()=>{stopped=true;clearTimeout(timer);controller.abort();signal?.removeEventListener('abort',stop)}
  signal?.addEventListener('abort',stop,{once:true});if(signal?.aborted)stop();else void run()
  return stop

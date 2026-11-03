@@ -20,7 +20,7 @@ export function startInboxMonitor({dataRoot,projectRoot,intervalMs=5000,onError=
      const config=parseChatJson(await readChatFile(folder,'binding.json',4096))
      if(bindingId(config.ownerId,config.spaceId)!==entry.name)continue
      const inbox=new WorkBuddyInbox({dataRoot,projectRoot,ownerId:config.ownerId,spaceId:config.spaceId})
-     const result=await inbox.scan({signal:controller.signal})
+     const result=await inbox.synchronize({signal:controller.signal})
      if(!result.ok&&result.health.error?.code!=='BUSY')onError(result.health.error)
     }catch(error){onError(inboxError(error))}
    }

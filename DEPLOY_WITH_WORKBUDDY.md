@@ -1,8 +1,8 @@
 # 使用 WorkBuddy 部署鹊信本地版
 
-## WorkBuddy 文件夹交接（F2 开发阶段）
+## WorkBuddy 文件夹交接（F3 开发阶段）
 
-当前已具备转换器、安全收件箱和后台清单发现能力；聊天归档/检索、青鸟范围确认界面将在 F3/F4 接入。`ready` 状态只表示文件校验通过，**不表示已生成回忆或完成共享**。
+当前已具备转换器、安全收件箱、聊天归档和本地检索；青鸟范围确认界面将在 F4 接入。`ready` 表示文件校验通过；`completed` 表示本地聊天归档事务完成。归档内容尚未成为正式回忆，也不会自动共享给伴侣。
 
 WorkBuddy 和鹊信在同一电脑上交接文件。“交换箱”不等于双方可见的共享聊天库。原始聊天放在源码目录以外，鹊信只访问明确配置的目录。当前不会遥控 WorkBuddy，也不会扫描微信。操作命令由当前本机用户执行；未来网页绑定账号时必须使用服务端登录身份，不能信任浏览器提交的账号 ID。
 
@@ -27,10 +27,10 @@ npm run workbuddy:inbox -- scan --owner-id '本机账号ID' --space-id '空间ID
 npm run workbuddy:inbox -- status --owner-id '本机账号ID' --space-id '空间ID'
 ```
 
-核对批次后，通过 `scan` 返回的 `batchId` 和 `digest` 批准本次本地正文/图片校验：
+核对批次后，通过 `scan` 返回的 `batchId` 和 `digest` 批准本次本地正文/图片校验。若同时允许建立本地聊天归档，加上 `--archive`；省略该参数则维持 F2 的仅校验行为：
 
 ```bash
-npm run workbuddy:inbox -- approve --owner-id '本机账号ID' --space-id '空间ID' --batch-id '批次ID' --digest '清单SHA256' --yes
+npm run workbuddy:inbox -- approve --owner-id '本机账号ID' --space-id '空间ID' --batch-id '批次ID' --digest '清单SHA256' --archive --yes
 npm run workbuddy:inbox -- scan --owner-id '本机账号ID' --space-id '空间ID'
 ```
 
@@ -38,9 +38,29 @@ npm run workbuddy:inbox -- scan --owner-id '本机账号ID' --space-id '空间ID
 
 异常批次按随机 ID 移入交换箱的 `quarantine`，原文件保留；修复文件、清单和权限后，可运行 `retry --owner-id ... --space-id ... --batch-id ... --yes` 返回待确认状态，并重新批准。软链接/特殊文件本身不会被跟随或移动，仅标记失败。
 
-授权绑定清单 SHA。清单变化撤销授权；文件属性变化触发重新校验。处理中断会在重启后重新校验，状态损坏会保留现场并停止。当前 F2 只会进入 `waiting → validating → ready/failed`；`processing/completed` 为 F3 归档保留。后续归档前必须再次校验 digest 和文件，不能仅凭旧的 ready 标记读取。
+授权绑定清单 SHA。清单变化撤销授权；文件属性变化触发重新校验。批准归档后的流程为 `waiting → validating → ready → processing → completed`。归档会再次核对文件，在单个数据库事务中写入；同一批次重复运行复用已提交结果，重启不会重复写入。进程意外退出自动恢复；用户主动取消后暂停归档，需重新批准。已经提交完成的事务不会因稍晚的取消回滚。
 
 停用可重复运行 `configure`，使用相同目录、账号、空间并加 `--disabled --yes`；下一次扫描停止读取。新目录应作为独立绑定规划，当前不允许覆盖原绑定路径。状态文件包含 ID、计数、清单摘要和错误码，不包含聊天正文、联系人称呼和密钥。聊天目录不会进入普通 Git/发布包；已有浏览器和服务端备份功能不包含此交换箱。
+
+### 归档位置与查询
+
+归档位于本机数据目录的 `workbuddy-archive/<账号空间绑定摘要>/chat.sqlite`，目录 `0700`、数据库文件 `0600`。它与浏览器 IndexedDB、同步用 PostgreSQL 分开保存；现有普通浏览器/服务端备份不包含该归档，原始导出和交换箱仍需用户单独妥善保留。文件权限限制访问，但不等于数据库内容加密。
+
+采用 Node.js 内置 SQLite 并在 Worker 中处理写入和查询，无需增加数据库软件。当前在 Node 22.22.3 验证；Worker 显式使用 `--experimental-sqlite` 以兼容项目的 Node 22.12 起配。SQLite 在 Node 22 中仍属于实验性接口，更新 Node 后需重跑归档测试。官方说明：https://nodejs.org/download/release/v22.23.0/docs/api/sqlite.html 。
+
+```bash
+npm run workbuddy:inbox -- archive-stats --owner-id '本机账号ID' --space-id '空间ID'
+npm run workbuddy:inbox -- search --owner-id '本机账号ID' --space-id '空间ID' --conversation-id '稳定会话ID' --query '海边' --from '2026-01-01' --to '2026-12-31' --limit 30
+npm run workbuddy:inbox -- message --owner-id '本机账号ID' --space-id '空间ID' --conversation-id '稳定会话ID' --message-id '检索返回的消息ID'
+```
+
+`search` 返回最多 100 条、每条最多 500 字符的相关片段；使用 `--sender-id` 筛选发送者，使用返回的 `nextCursor` 继续翻页，翻页时需保持其他筛选条件一致。分页固定当前快照，新投递和迟到消息在下次新查询中出现。`message` 返回选定原文及来源位置（来源类型 `workbuddy-chat`、批次、原消息 ID、分块、行号、清单 SHA、提取器版本）。这两个显式查询命令会向当前终端显示私密内容，请勿将其输出并入公开日志。
+
+媒体在数据库中仅保存相对路径与 SHA，不复制图片字节；原批次图片被移走时，图片引用可能不可用。归档按账号/空间分开存储，F4 网页接口须根据已认证会话限定访问，禁止使用客户端提供的账号 ID 授权。
+
+原始消息 ID 优先使用；没有 ID 时，转换器按会话、发送者、时间、规范化正文、媒体哈希和相同消息出现次数生成回退 ID，避免批次切分和序号变化导致重复。`fallbackIdentities` 返回本次使用回退身份的数量。无原始 ID 时，跨批次完全同一时间、同一发送者、同一正文的真实重复仍有歧义，应保留完整原始导出用于复核；每次投递的来源位置均保存。重复消息不推进新增计数；迟到消息照常入库，水位只记录已见最晚时间，不作为跳过历史消息的依据。缺失时间会要求补齐，不再捏造为当天中午。
+
+同一原始 ID 的正文冲突、同一批次 ID 换内容会拒绝整批写入。当前每个账号/空间限制 100 万条归档消息、200 万条来源关系，正文与引用的保守空间预算 512 MiB；上限错误会停止该批次。读取接口不提供编辑或删除原始聊天的功能。归档数据库及收件箱状态目录已加入 Git、发布包和本地网页直链访问的排除规则。
 
 适用范围：macOS、Node.js 22.12+、PostgreSQL 17、桌面浏览器。本流程只部署到当前电脑，不上传公网。
 

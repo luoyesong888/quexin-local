@@ -6,6 +6,7 @@ import {homedir} from 'node:os'
 import {randomUUID} from 'node:crypto'
 
 const messages={UNSAFE_PATH:'目录或文件路径不安全',UNSAFE_FILE:'只接受普通目录和单链接文件',PERMISSION_DENIED:'目录须为 0700，文件须为 0600，且归当前用户所有',FILE_LIMIT:'文件超过读取上限',FILE_CHANGED:'校验期间文件发生变化，请重新投递',INVALID_JSON:'文件不是有效 JSON',INBOX_UNAVAILABLE:'交换箱暂时不可访问',BUSY:'另一个收件箱操作正在运行',INVALID_MANIFEST:'批次清单不符合交接协议',INVALID_MESSAGE:'消息字段、顺序或引用无效',HASH_MISMATCH:'文件 SHA-256 不匹配',SIZE_MISMATCH:'文件大小与清单不符',MEDIA_INVALID:'图片格式或内容损坏',MISSING_FILE:'清单列出的文件缺失',UNEXPECTED_FILE:'批次含清单外文件',BATCH_CONFLICT:'同一批次 ID 的内容已经改变',APPROVAL_REQUIRED:'请先确认这份批次清单',STATE_INVALID:'收件箱状态损坏，已停止处理',NOT_CONFIGURED:'尚未配置交换箱'}
+Object.assign(messages,{ARCHIVE_UNAVAILABLE:'本地聊天归档暂时不可用',ARCHIVE_TIMEOUT:'归档操作超时，可重新尝试',INVALID_QUERY:'检索条件或分页参数无效',MESSAGE_CONFLICT:'同一消息 ID 对应不同内容，批次已停止写入',CANCELLED:'操作已取消',ARCHIVE_APPROVAL_REQUIRED:'该批次尚未获准建立本地聊天归档'})
 export class InboxError extends Error {
  constructor(code,file){const known=Object.hasOwn(messages,code);super(known?messages[code]:'收件箱处理失败');this.name='InboxError';this.code=known?code:'INBOX_UNAVAILABLE';if(file&&safeChatPath(file))this.file=file}
 }
