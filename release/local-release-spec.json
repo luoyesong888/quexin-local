@@ -47,6 +47,7 @@
   ],
   "excludedPrefixes": [
     "scripts/test-",
+    "scripts/accept-",
     "scripts/dev-"
   ],
   "forbiddenNames": [

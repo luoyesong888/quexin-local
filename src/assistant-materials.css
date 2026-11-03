@@ -4,3 +4,5 @@
 .assistant-attachment-options{display:flex;flex-direction:column;gap:7px;padding:8px;margin-bottom:8px;background:var(--soft);border-radius:6px;font-size:11px;max-height:24dvh;overflow:auto}
 .assistant-attachment-options label{display:flex;align-items:flex-start;gap:8px;line-height:1.6}.assistant-attachment-options input{flex:none;margin-top:3px}.assistant-attachment-options .text-link{font-size:11px;text-align:left}.assistant-attachment-options small{color:var(--muted)}
 .home-source-actions{padding:16px;background:var(--soft);border:1px solid var(--line);border-radius:8px}.home-source-actions p{color:var(--muted);line-height:1.8;margin:0 0 12px}.home-source-actions .btn+.btn{margin-top:8px}
+
+.nav-number::before{content:attr(data-number)}

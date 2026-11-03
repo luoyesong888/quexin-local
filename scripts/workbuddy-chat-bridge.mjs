@@ -6,14 +6,14 @@ import {convertLegacyWorkBuddyExport,WORKBUDDY_CHAT_FORMAT} from '../shared/work
 
 const project=resolve(dirname(fileURLToPath(import.meta.url)),'..')
 const usage=`用法：
-  node scripts/workbuddy-chat-bridge.mjs convert --source <WorkBuddy导出目录> --inbox <鹊信交换箱> --space-id <spaceId> --conversation-id <conversationId> [--dry-run]
+  node scripts/workbuddy-chat-bridge.mjs convert --source <WorkBuddy导出目录> --inbox <鹊信交换箱> --space-id <spaceId> --conversation-id <conversationId> [--media-overrides <补导原图目录>] [--dry-run]
   node scripts/workbuddy-chat-bridge.mjs task --source <WorkBuddy导出目录> --inbox <鹊信交换箱> --space-id <spaceId> --conversation-id <conversationId>
 
 协议：${WORKBUDDY_CHAT_FORMAT}`
 const action=process.argv[2]??'help',args=process.argv.slice(3)
-const {values}=parseArgs({args,strict:true,options:{source:{type:'string'},inbox:{type:'string'},'space-id':{type:'string'},'conversation-id':{type:'string'},'job-id':{type:'string'},'batch-id':{type:'string'},'extractor-version':{type:'string'},timezone:{type:'string'},'dry-run':{type:'boolean',default:false}}})
+const {values}=parseArgs({args,strict:true,options:{source:{type:'string'},'media-overrides':{type:'string'},inbox:{type:'string'},'space-id':{type:'string'},'conversation-id':{type:'string'},'job-id':{type:'string'},'batch-id':{type:'string'},'extractor-version':{type:'string'},timezone:{type:'string'},'dry-run':{type:'boolean',default:false}}})
 const required=name=>{const value=String(values[name]??'').trim();if(!value)throw new Error(`缺少 --${name}`);return value}
-const options=()=>({sourceDir:required('source'),inboxRoot:required('inbox'),spaceId:required('space-id'),conversationId:required('conversation-id'),jobId:values['job-id'],batchId:values['batch-id'],extractorVersion:values['extractor-version'],timezone:values.timezone,dryRun:Boolean(values['dry-run'])})
+const options=()=>({sourceDir:required('source'),mediaOverridesDir:values['media-overrides'],inboxRoot:required('inbox'),spaceId:required('space-id'),conversationId:required('conversation-id'),jobId:values['job-id'],batchId:values['batch-id'],extractorVersion:values['extractor-version'],timezone:values.timezone,dryRun:Boolean(values['dry-run'])})
 const shellQuote=value=>"'"+value.replaceAll("'","'\\''")+"'"
 
 async function main(){

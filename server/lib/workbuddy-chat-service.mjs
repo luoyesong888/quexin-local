@@ -92,9 +92,10 @@ export class WorkBuddyChatService {
     const preview=this.previews.get(body.previewId)
     if(!preview||preview.key!==key||preview.digest!==body.digest)fail('PREVIEW_EXPIRED','资料确认已失效，请重新选择片段。',409)
     if(preview.model!==JSON.stringify(this.provider.publicConfig()))fail('PREVIEW_EXPIRED','模型配置已变化，请重新确认发送范围。',409)
+    // Consume before any await: simultaneous clicks must never reuse consent.
+    this.previews.delete(body.previewId)
     await inbox.load()
     if(!inbox.config.enabled)fail('APPROVAL_REQUIRED','资料文件夹已停用，请重新连接。',409)
-    this.previews.delete(body.previewId) // One-use approval, including failed calls.
     let candidates
     if(body.mode==='model'){
      try{candidates=(await this.provider.run('candidates',preview.payload,{signal})).candidates}

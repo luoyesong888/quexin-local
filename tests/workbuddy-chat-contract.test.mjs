@@ -2,11 +2,13 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {execFile} from 'node:child_process'
 import {promisify} from 'node:util'
-import {mkdtemp,mkdir,readFile,rm,stat,writeFile} from 'node:fs/promises'
+import {mkdtemp,mkdir,readFile,rm,stat,writeFile,symlink} from 'node:fs/promises'
 import {join} from 'node:path'
 import {tmpdir} from 'node:os'
 import {createHash} from 'node:crypto'
 import {convertLegacyWorkBuddyExport,validateWorkBuddyChatManifest,WORKBUDDY_CHAT_FORMAT} from '../shared/workbuddy-chat-contract.mjs'
+import sharp from 'sharp'
+import {inspectBatch,validateBatch} from '../server/lib/workbuddy-inbox-validator.mjs'
 
 const exec=promisify(execFile),digest=value=>createHash('sha256').update(value).digest('hex')
 async function fixture(){
@@ -41,4 +43,32 @@ test('F1 拒绝越界图片、缺失图片和无效 manifest',async()=>{
 test('F1 CLI 可生成不含密钥的 WorkBuddy 固定任务',async()=>{
  const f=await fixture()
  try{const result=await exec(process.execPath,['scripts/workbuddy-chat-bridge.mjs','task','--source',f.source,'--inbox',f.inbox,'--space-id','space-demo','--conversation-id','conversation-demo']);assert.match(result.stdout,/WorkBuddy × 鹊信/);assert.match(result.stdout,/workbuddy-chat-bridge\.mjs convert/);assert.match(result.stdout,/space-demo/);assert.equal(/API[_ -]?Key|password/i.test(result.stdout),false)}finally{await rm(f.root,{recursive:true,force:true})}
+})
+
+test('补导原图可按相同相对路径交接并完整校验，不覆盖原导出',async()=>{
+ const f=await fixture(),replacement=join(f.root,'replacement')
+ try{
+  const original=await readFile(join(f.source,'chat.json')),bytes=await sharp({create:{width:12,height:12,channels:3,background:'#abc'}}).jpeg().toBuffer()
+  await mkdir(join(replacement,'images'),{recursive:true});await writeFile(join(replacement,'images/memory.jpg'),bytes)
+  const input={sourceDir:f.source,inboxRoot:f.inbox,spaceId:'space',conversationId:'couple',jobId:'old'},old=await convertLegacyWorkBuddyExport(input),oldInfo=await inspectBatch(old.summary.ready,{spaceId:'space',batchId:old.summary.batchId})
+  await assert.rejects(()=>validateBatch(old.summary.ready,{spaceId:'space',batchId:old.summary.batchId,expectedDigest:oldInfo.digest}),{code:'MEDIA_INVALID'})
+  const result=JSON.parse((await exec(process.execPath,['scripts/workbuddy-chat-bridge.mjs','convert','--source',f.source,'--media-overrides',replacement,'--inbox',f.inbox,'--space-id','space','--conversation-id','couple','--job-id','repaired'])).stdout)
+  assert.equal(result.mediaOverridesUsed,1);assert.equal(result.messages,3);assert.equal(result.media,1)
+  const inspected=await inspectBatch(result.ready,{spaceId:'space',batchId:result.batchId})
+  assert.equal((await validateBatch(result.ready,{spaceId:'space',batchId:result.batchId,expectedDigest:inspected.digest})).media,1)
+  assert.equal(inspected.manifest.media[0].sha256,digest(bytes));assert.deepEqual(await readFile(join(f.source,'images/memory.jpg')),f.image);assert.deepEqual(await readFile(join(f.source,'chat.json')),original)
+ }finally{await rm(f.root,{recursive:true,force:true})}
+})
+
+test('补导目录只补充声明图片，缺失时读取旧图，链接和项目内目录不可借道',async()=>{
+ const f=await fixture(),replacement=join(f.root,'replacement')
+ try{
+  await mkdir(join(replacement,'images'),{recursive:true});await writeFile(join(replacement,'irrelevant.txt'),'ignored')
+  const input={sourceDir:f.source,mediaOverridesDir:replacement,inboxRoot:f.inbox,spaceId:'space',conversationId:'couple',dryRun:true}
+  assert.equal((await convertLegacyWorkBuddyExport(input)).summary.mediaOverridesUsed,0)
+  await symlink(join(f.source,'images/memory.jpg'),join(replacement,'images/memory.jpg'))
+  await assert.rejects(()=>convertLegacyWorkBuddyExport(input),error=>['UNSAFE_PATH','UNSAFE_FILE'].includes(error.code))
+  await assert.rejects(()=>convertLegacyWorkBuddyExport({...input,mediaOverridesDir:process.cwd()}),{code:'UNSAFE_PATH'})
+  await assert.rejects(()=>convertLegacyWorkBuddyExport({...input,mediaOverridesDir:join(f.root,'absent')}))
+ }finally{await rm(f.root,{recursive:true,force:true})}
 })

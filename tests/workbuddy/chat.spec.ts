@@ -2,6 +2,7 @@ import {test as base,expect,type Page,type Locator} from '@playwright/test'
 import {mkdtemp,mkdir,writeFile,readFile,readdir,rm} from 'node:fs/promises'
 import {join} from 'node:path'
 import {convertLegacyWorkBuddyExport} from '../../shared/workbuddy-chat-contract.mjs'
+import {shareableEntities} from '../../shared/sync-policy.mjs'
 
 const password='workbuddy-chat-test-password'
 const test=base.extend<{folder:string}>({folder:async({},use)=>{const root=await mkdtemp('/private/tmp/quexin-wb-browser-');try{await use(root)}finally{await rm(root,{recursive:true,force:true})}}})
@@ -95,4 +96,20 @@ test('损坏批次不伪造成功；文件修复重试必须再次确认范围',
  await batch.getByRole('button',{name:'文件修复后重新检查'}).click()
  await expect(batch.getByRole('checkbox')).not.toBeChecked();await expect(batch.getByRole('button',{name:'确认读取并归档'})).toBeDisabled()
  await batch.getByRole('checkbox').check();await batch.getByRole('button',{name:'确认读取并归档'}).click();await expect(card).toContainText('归档完成：新增 3 条')
+})
+
+test('浏览器备份排除未确认归档，仅保存选中私人节选，恢复后不自动共享',async({page,folder,browser})=>{
+ const panel=await setup(page),card=await connect(panel,folder);await deliver(folder);await receive(card);const preview=await select(card)
+ await preview.getByRole('button',{name:'只在本机整理'}).click();await expect(card.getByLabel('聊天候选')).toBeVisible()
+ const backup=async()=>{await page.getByRole('navigation',{name:'主导航'}).getByRole('button',{name:'系统',exact:true}).click();await page.getByRole('button',{name:'数据与备份',exact:true}).click();const pending=page.waitForEvent('download');await page.getByRole('button',{name:'导出完整备份'}).click();const path=(await (await pending).path())!;return{path,data:JSON.parse(await readFile(path,'utf8'))}}
+ const before=await backup();expect(JSON.stringify(before.data)).not.toContain('SYNTHETIC_')
+ await card.getByLabel('聊天候选').getByRole('button',{name:'确认保存为私人记录'}).click();await expect(card.getByLabel('聊天候选')).toContainText('已保存为私人记录')
+ const after=await backup();expect(JSON.stringify(after.data)).toContain('SYNTHETIC_SELECTED');expect(JSON.stringify(after.data)).not.toContain('SYNTHETIC_UNSELECTED')
+ const saved=after.data.records.find((row:{provenance?:{type:string}})=>row.provenance?.type==='workbuddy-chat');expect(saved.sensitive).toBe(true);expect(saved.mediaScope).toBe('private');expect(shareableEntities(after.data).some((row:{item:{id:string}})=>row.item.id===saved.id)).toBe(false)
+ const restoredContext=await browser.newContext(),restored=await restoredContext.newPage()
+ try{
+  await restored.goto('/#settings');await restored.getByLabel('怎么称呼你').fill('恢复测试者');await restored.getByLabel('怎么称呼对方').fill('对方');await restored.getByRole('button',{name:'创建我们的空间'}).click()
+  await restored.getByRole('button',{name:'数据与备份',exact:true}).click();await restored.getByLabel('选择 JSON 备份文件').setInputFiles(after.path);await restored.getByRole('dialog',{name:'恢复这份备份？'}).getByRole('button',{name:'确认恢复'}).click()
+  const restoredData=await browserData(restored);expect(restoredData).toContain('SYNTHETIC_SELECTED');expect(restoredData).not.toContain('SYNTHETIC_UNSELECTED');expect(restoredData).toContain('"mediaScope":"private"')
+ }finally{await restoredContext.close()}
 })

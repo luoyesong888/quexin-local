@@ -99,3 +99,12 @@ test('新文件夹连接要求密码，取消前置请求不产生读取授权',
  await assert.rejects(()=>f.run('receive',{batchId:'batch',digest:found.batches[0].digest,consent:true},f.user,{signal:abort.signal}),{code:'CANCELLED'})
  assert.equal((await new WorkBuddyInbox(f.options).state()).entries.batch.approval,null)
 })
+
+test('并发提交同一预览只允许一次模型调用',async t=>{
+ const f=await fixture(t);await f.receive();const preview=await f.preview()
+ const body={previewId:preview.previewId,digest:preview.digest,mode:'model',consent:true}
+ const results=await Promise.allSettled([f.run('organize',body),f.run('organize',body)])
+ assert.equal(results.filter(result=>result.status==='fulfilled').length,1)
+ assert.equal(results.find(result=>result.status==='rejected').reason.code,'PREVIEW_EXPIRED')
+ assert.equal(f.calls.length,1)
+})

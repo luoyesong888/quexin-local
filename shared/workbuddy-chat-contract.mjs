@@ -77,26 +77,30 @@ export function normalizeLegacyChat(value,{conversationId='wechat-conversation',
  return{messages,participants:[{id:'self',label:self},{id:'partner',label:partner}],range:{from:value.range?.[0]??value.chats[0]?.date,to:value.range?.[1]??value.chats.at(-1)?.date}}
 }
 
-export async function convertLegacyWorkBuddyExport({sourceDir,inboxRoot,spaceId,conversationId,extractorVersion='workbuddy-legacy-adapter-1',jobId=randomUUID(),batchId,createdAt=new Date().toISOString(),timezone='Asia/Shanghai',dryRun=false}={}){
+export async function convertLegacyWorkBuddyExport({sourceDir,mediaOverridesDir,inboxRoot,spaceId,conversationId,extractorVersion='workbuddy-legacy-adapter-1',jobId=randomUUID(),batchId,createdAt=new Date().toISOString(),timezone='Asia/Shanghai',dryRun=false}={}){
  if(!sourceDir||!inboxRoot)throw new Error('需要源目录和鹊信交换箱目录')
  const source=absoluteChatPath(resolve(String(sourceDir))),inbox=assertExternalInbox(resolve(String(inboxRoot)),resolve(dirname(fileURLToPath(import.meta.url)),'..'));safeId(spaceId,'spaceId');safeId(conversationId,'conversationId');safeId(jobId,'jobId')
  if(containsPath(source,inbox)||containsPath(inbox,source))throw new InboxError('UNSAFE_PATH')
  await checkedPath(source)
+ const overrides=mediaOverridesDir?assertExternalInbox(resolve(String(mediaOverridesDir)),resolve(dirname(fileURLToPath(import.meta.url)),'..')):null
+ if(overrides){if(containsPath(overrides,inbox)||containsPath(inbox,overrides))throw new InboxError('UNSAFE_PATH');await checkedPath(overrides)}
  const legacy=parseChatJson(await readChatFile(source,'chat.json',64*1024*1024,{privateMode:false}))
  if(!Array.isArray(legacy?.chats)||!legacy.chats.every(day=>Array.isArray(day?.messages)))throw new InboxError('INVALID_JSON')
  const referenced=[...new Set(legacy.chats.flatMap(day=>day.messages.flatMap(item=>[...String(item?.text??'').matchAll(imageMarker)].map(match=>match[1]))))];if(referenced.length>WORKBUDDY_CHAT_LIMITS.media)throw new Error('媒体数量超过上限')
- const media=[],mediaByLegacyPath=new Map();let totalBytes=0
+ const media=[],mediaByLegacyPath=new Map();let totalBytes=0,mediaOverridesUsed=0
  for(const legacyValue of referenced){
   const legacyPath=safeRelativePath(legacyValue),absolute=resolve(source,legacyPath);if(!within(source,absolute))throw new Error(`图片路径越界：${legacyPath}`)
-  const buffer=await readChatFile(source,legacyPath,WORKBUDDY_CHAT_LIMITS.mediaBytes,{privateMode:false});totalBytes+=buffer.length;if(totalBytes>WORKBUDDY_CHAT_LIMITS.totalBytes)throw new Error('批次总大小超过上限')
-  const targetPath=`media/${sha256(buffer).slice(0,16)}-${basename(legacyPath)}`,record={legacyPath,path:targetPath,mime:mimeFor(legacyPath),size:buffer.length,sha256:sha256(buffer)};if(!media.some(item=>item.path===targetPath))media.push(record);mediaByLegacyPath.set(legacyPath,record)
+  let buffer,readRoot=source
+  if(overrides){try{buffer=await readChatFile(overrides,legacyPath,WORKBUDDY_CHAT_LIMITS.mediaBytes,{privateMode:false});readRoot=overrides;mediaOverridesUsed++}catch(error){if(error.code!=='MISSING_FILE')throw error}}
+  buffer??=await readChatFile(source,legacyPath,WORKBUDDY_CHAT_LIMITS.mediaBytes,{privateMode:false});totalBytes+=buffer.length;if(totalBytes>WORKBUDDY_CHAT_LIMITS.totalBytes)throw new Error('批次总大小超过上限')
+  const targetPath=`media/${sha256(buffer).slice(0,16)}-${basename(legacyPath)}`,record={legacyPath,readRoot,path:targetPath,mime:mimeFor(legacyPath),size:buffer.length,sha256:sha256(buffer)};if(!media.some(item=>item.path===targetPath))media.push(record);mediaByLegacyPath.set(legacyPath,record)
  }
  const normalized=normalizeLegacyChat(legacy,{conversationId,timezone,mediaByLegacyPath}),chunks=[]
  for(let offset=0;offset<normalized.messages.length;offset+=WORKBUDDY_CHAT_LIMITS.chunkMessages){const messages=normalized.messages.slice(offset,offset+WORKBUDDY_CHAT_LIMITS.chunkMessages),file=`messages-${String(chunks.length+1).padStart(4,'0')}.json`,text=JSON.stringify({messages},null,2)+'\n';chunks.push({file,count:messages.length,sha256:sha256(text),text})}
  const identity=sha256(JSON.stringify({conversationId,range:normalized.range,totals:{messages:normalized.messages.length,media:media.length},chunks:chunks.map(({file,count,sha256})=>({file,count,sha256})),media:media.map(({path,size,sha256})=>({path,size,sha256}))})),resolvedBatch=safeId(batchId??`wb-${identity.slice(0,20)}`,'batchId')
  const manifest={format:WORKBUDDY_CHAT_FORMAT,jobId,batchId:resolvedBatch,spaceId,conversationId,sourceApp:'wechat',extractorVersion,createdAt,timezone,participants:normalized.participants,range:normalized.range,totals:{messages:normalized.messages.length,media:media.length},chunks:chunks.map(({file,count,sha256})=>({file,count,sha256})),media:media.map(({path,mime,size,sha256})=>({path,mime,size,sha256})),status:'ready'}
  const validation=validateWorkBuddyChatManifest(manifest);if(!validation.ok)throw new Error(`manifest 校验失败：${validation.errors.join('；')}`)
- const summary={format:manifest.format,jobId,batchId:resolvedBatch,spaceId,conversationId,range:manifest.range,messages:manifest.totals.messages,media:manifest.totals.media,chunks:manifest.chunks.length,dryRun:Boolean(dryRun)}
+ const summary={format:manifest.format,jobId,batchId:resolvedBatch,spaceId,conversationId,range:manifest.range,messages:manifest.totals.messages,media:manifest.totals.media,chunks:manifest.chunks.length,mediaOverridesUsed,dryRun:Boolean(dryRun)}
  if(dryRun)return{manifest,summary}
  const spaceRoot=join(inbox,spaceId),staging=join(spaceRoot,'staging',jobId),readyParent=join(spaceRoot,'ready'),ready=join(readyParent,resolvedBatch)
  if(!within(inbox,spaceRoot)||!within(spaceRoot,staging)||!within(spaceRoot,ready))throw new Error('交换箱路径越界')
@@ -106,7 +110,7 @@ export async function convertLegacyWorkBuddyExport({sourceDir,inboxRoot,spaceId,
  try{
   await mkdir(staging,{mode:0o700});stagingCreated=true;await chmod(staging,0o700)
   for(const chunk of chunks)await writePrivate(join(staging,chunk.file),chunk.text)
-  for(const item of media){const bytes=await readChatFile(source,item.legacyPath,WORKBUDDY_CHAT_LIMITS.mediaBytes,{privateMode:false});if(sha256(bytes)!==item.sha256)throw new InboxError('FILE_CHANGED');await writePrivate(join(staging,item.path),bytes)}
+  for(const item of media){const bytes=await readChatFile(item.readRoot,item.legacyPath,WORKBUDDY_CHAT_LIMITS.mediaBytes,{privateMode:false});if(sha256(bytes)!==item.sha256)throw new InboxError('FILE_CHANGED');await writePrivate(join(staging,item.path),bytes)}
   await writePrivate(join(staging,'manifest.json'),JSON.stringify(manifest,null,2)+'\n')
   await rename(staging,ready);await chmod(ready,0o700)
  }catch(error){if(stagingCreated)await rm(staging,{recursive:true,force:true});throw error}
