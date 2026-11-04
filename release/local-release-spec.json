@@ -2,7 +2,10 @@
   "format": "quexin-local-release-spec-v1",
   "target": {
     "platform": "darwin",
-    "architectures": ["arm64", "x64"],
+    "architectures": [
+      "arm64",
+      "x64"
+    ],
     "node": ">=22.12.0",
     "postgresqlMajor": 17
   },
@@ -10,6 +13,7 @@
     ".env.example",
     "README.md",
     "DEPLOY_WITH_WORKBUDDY.md",
+    "DEPLOY_WINDOWS_WSL.md",
     "本地使用说明.md",
     "index.html",
     "package.json",
@@ -26,7 +30,14 @@
     "config/workbuddy-options.example.json",
     "release/local-release-spec.json"
   ],
-  "includeDirectories": ["src", "shared", "public", "server", "scripts", "skills"],
+  "includeDirectories": [
+    "src",
+    "shared",
+    "public",
+    "server",
+    "scripts",
+    "skills"
+  ],
   "excludedPaths": [
     ".env.local",
     ".local-data",

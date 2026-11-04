@@ -3,6 +3,7 @@ import {promisify} from 'node:util'
 import {lstat,mkdtemp,readFile,rm} from 'node:fs/promises'
 import {basename,dirname,join,resolve} from 'node:path'
 import {fileURLToPath} from 'node:url'
+import {tmpdir} from 'node:os'
 import {fileRecord,forbiddenPath,normalizePath,sha256File,walkFiles} from './lib/release-files.mjs'
 
 const exec=promisify(execFile),project=resolve(dirname(fileURLToPath(import.meta.url)),'..'),target=process.argv[2]?resolve(process.argv[2]):'',json=process.argv.includes('--json')
@@ -30,7 +31,7 @@ async function main(){
   const actualSha256=await sha256File(target);if(actualSha256!==expected)throw new Error('发布包 SHA-256 不匹配，文件可能损坏或被篡改')
   const listing=(await exec('tar',['-tzf',target])).stdout.trim().split('\n').filter(Boolean);if(!listing.length||listing.some(name=>!safeArchiveEntry(name)))throw new Error('归档包含不安全路径')
   const verbose=(await exec('tar',['-tvzf',target])).stdout.trim().split('\n').filter(Boolean);if(verbose.some(line=>['l','h'].includes(line.trim()[0])))throw new Error('归档包含链接，不允许解压')
-  const temporary=await mkdtemp('/private/tmp/quexin-verify-')
+  const temporary=await mkdtemp(join(tmpdir(),'quexin-verify-'))
   try{await exec('tar',['-xzf',target,'-C',temporary],{env:{...process.env,COPYFILE_DISABLE:'1'}});const packageRoot=join(temporary,'quexin-local'),external=JSON.parse(await readFile(manifestSidecar,'utf8')),internal=JSON.parse(await readFile(join(packageRoot,'release-manifest.json'),'utf8'));if(!equal(external,internal))throw new Error('包外 manifest 与包内 manifest 不一致');return await verifyDirectory(packageRoot,actualSha256)}finally{await rm(temporary,{recursive:true,force:true})}
 }
 try{const result=await main();if(json)console.log(JSON.stringify(result,null,2));else console.log(`✓ 发布包校验通过 · v${result.version} · ${result.fileCount} 个文件 · ${result.totalBytes} 字节`)}catch(error){console.error(`发布包校验失败：${error instanceof Error?error.message:String(error)}`);process.exitCode=1}

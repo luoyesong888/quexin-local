@@ -15,3 +15,14 @@ test('已有资料和正在运行的鹊信只警告，不允许被误判为全�
 test('真实采集不会修改已有资料',async()=>{const root=await mkdtemp('/private/tmp/quexin-preflight-'),sentinel=join(root,'do-not-touch.txt');try{await writeFile(sentinel,'保持原样');const result=await collectPreflight({projectRoot:process.cwd(),dataRoot:root,ports:[61481,61482,61483,61484]});assert.equal(await readFile(sentinel,'utf8'),'保持原样');assert.equal(result.readOnly,true);assert.equal(result.checks.find(item=>item.id==='existing-data').status,'warning')}finally{await rm(root,{recursive:true,force:true})}})
 test('无 Node 的 bootstrap 只提示，不安装或初始化',async()=>{await assert.rejects(()=>exec('/bin/zsh',['WorkBuddy部署检查.command'],{cwd:process.cwd(),env:{...process.env,PATH:'/usr/bin:/bin'}}),error=>{assert.match(String(error.stdout),/未找到 Node.js/);assert.match(String(error.stdout),/没有安装软件/);return true})})
 test('发布边界明确排除数据、密钥、依赖、日志和测试资料',async()=>{const spec=JSON.parse(await readFile('release/local-release-spec.json','utf8'));for(const path of ['.env.local','.local-data','node_modules','test-results','reports','tests'])assert.ok(spec.excludedPaths.includes(path));for(const name of ['database.dump','secrets.json','service.log'])assert.ok(spec.forbiddenNames.includes(name));assert.ok(spec.includeDirectories.includes('server'));assert.ok(spec.includeFiles.includes('package-lock.json'));assert.ok(spec.includeFiles.includes('DEPLOY_WITH_WORKBUDDY.md'))})
+
+test('WSL 预检允许普通 Linux 用户与宿主浏览器，明确保留实机验收提醒',()=>{
+ const result=evaluatePreflight({...good,platform:'linux',isWSL:true,isRoot:false,windowsMountedPath:false,browser:''})
+ assert.equal(result.ok,true);assert.match(result.target,/WSL2/)
+ assert.equal(result.checks.find(row=>row.id==='wsl-host-validation').status,'warning')
+})
+test('WSL root、Windows 挂载盘、原生 Windows 和非 WSL Linux 不能误报可安装',()=>{
+ for(const input of [{platform:'linux',isWSL:true,isRoot:true},{platform:'linux',isWSL:true,windowsMountedPath:true},{platform:'linux',isWSL:true,dataSymlink:true},{platform:'win32'},{platform:'linux',isWSL:false}]){
+  assert.equal(evaluatePreflight({...good,...input}).ok,false)
+ }
+})

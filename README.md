@@ -32,6 +32,8 @@ npm run local:start
 
 `dev:full` 和 `dev:formal-full` 已统一为上述启动器的兼容入口。单独开发前端仍可使用 `npm run dev`，但不要与已启动的 4188 服务同时运行。
 
+Windows 用户可使用 **Windows + WSL2 预览部署包**：通过 PowerShell 入口启动 WSL 内的服务，在 Windows 浏览器访问。此版本不是原生 Windows 安装器，尚待 Windows 实机验收，详见 [Windows 部署说明](DEPLOY_WINDOWS_WSL.md)。
+
 ## 体验流程
 
 首次打开创建空白空间，也可主动选择“先用虚构资料体验完整功能”。示例不会连接真实微信或模型。

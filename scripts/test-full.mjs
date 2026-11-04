@@ -29,6 +29,7 @@ try{
  await check('account-tokens',process.execPath,['--test','tests/account-tokens.test.mjs'],configuration?{ACCOUNT_TEST_DATABASE_URL:configuration.adminUrl}:{})
  await check('runtime-config',process.execPath,['--test','tests/runtime-config.test.mjs'])
  await check('workbuddy-preflight',process.execPath,['--test','tests/workbuddy-preflight.test.mjs'])
+ await check('windows-wsl-package',process.execPath,['--test','tests/windows-wsl-package.test.mjs'])
  await check('workbuddy-deploy',process.execPath,['--test','tests/workbuddy-deploy.test.mjs'])
  await check('release-bundle',process.execPath,['--test','tests/release-bundle.test.mjs'])
  await check('workbuddy-options',process.execPath,['--test','tests/workbuddy-options.test.mjs'])

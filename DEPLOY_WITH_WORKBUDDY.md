@@ -1,5 +1,7 @@
 # 使用 WorkBuddy 部署鹊信本地版
 
+Windows 用户请先阅读 [Windows + WSL2 预览部署说明](DEPLOY_WINDOWS_WSL.md)，不要直接执行 macOS 的 `.command` 入口。
+
 ## WorkBuddy 文件夹交接（F1–F6 已完成）
 
 当前已具备转换器、安全收件箱、聊天归档、本地检索，以及青鸟聊天内的范围确认、候选整理和原文追溯。`ready` 表示文件校验通过；`completed` 表示本地聊天归档事务完成。归档内容尚未成为正式回忆，也不会自动共享给伴侣。
